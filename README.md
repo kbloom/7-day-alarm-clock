@@ -7,7 +7,10 @@ It uses the following components:
  * [SparkFun Qwiic MP3 Trigger DEV-15165](https://www.sparkfun.com/products/15165)
  * [SparkFun 16x2 SerLCD - RGB Text (Qwiic) LCD-16397](https://www.sparkfun.com/products/16397)
  * [SparkFun Qwiic Keypad - 12 Button COM-15290](https://www.sparkfun.com/products/15290)
- * 2x SparkFun Qwiic Arcade buttons. I used the following, but you can choose other colors:
+ * 2x SparkFun Qwiic Arcade buttons. I used the following, but you can choose
+   other colors. You'll need to change the I2C address of the snooze button to
+   110 (0x6E) using
+   [Example5_ChangeI2CAddress](https://github.com/sparkfun/SparkFun_Qwiic_Button_Arduino_Library/tree/master/examples/Example5_ChangeI2CAddress).
    * [Red SPX-15591](https://www.sparkfun.com/products/15591) for the stop button.
    * [Blue SPX-15592](https://www.sparkfun.com/products/15592) for the snooze button.
  * A speaker
