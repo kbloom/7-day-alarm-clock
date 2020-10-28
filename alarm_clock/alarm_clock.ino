@@ -14,6 +14,18 @@
  *  0x72: SerLCD
  */
 
+enum AlarmState {
+  WAITING,
+  SNOOZING,
+  SOUNDING,
+};
+
+bool AlarmTriggeredForTest();
+void ExtendSnooze();
+void PrintTime();
+void TransitionStateTo(AlarmState new_state);
+
+
 QwiicButton stop_button;
 QwiicButton snooze_button;
 KEYPAD keypad;
@@ -21,13 +33,22 @@ SerLCD lcd;
 MP3TRIGGER mp3;
 RV1805 rtc;
 
-enum AlarmState {
-  WAITING,
-  SNOOZING,
-  SOUNDING,
+
+const char* kDayNames[] = {
+  "",
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat"
 };
 
 AlarmState state;
+int snoozeHours = -1;
+int snoozeMinutes = -1;
+bool snoozePM = false;
 
 void setup() {
   bool setup_error = false;
@@ -102,16 +123,7 @@ void ExtendSnooze() {
   Serial.println(buf);
 }
 
-const char* kDayNames[] = {
-  "",
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat"
-};
+
 
 void PrintTime() {
   char buf[17];
