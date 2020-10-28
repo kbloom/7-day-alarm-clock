@@ -20,6 +20,8 @@ enum AlarmState {
   SOUNDING,
 };
 
+int WriteToPrint(char c, FILE* f);
+FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
@@ -30,6 +32,8 @@ QwiicButton stop_button;
 QwiicButton snooze_button;
 KEYPAD keypad;
 SerLCD lcd;
+FILE* lcd_file;
+FILE* serial_file;
 MP3TRIGGER mp3;
 RV1805 rtc;
 
@@ -79,6 +83,9 @@ void setup() {
     Serial.println("Freezing");
     while(1);
   }
+
+  lcd_file = OpenAsFile(lcd);
+  serial_file = OpenAsFile(Serial);
   
   stop_button.setDebounceTime(500);
   snooze_button.setDebounceTime(500);
@@ -86,6 +93,18 @@ void setup() {
   lcd.setBacklight(255,0,0);
   state = WAITING;
 }
+
+int WriteToPrint(char c, FILE* f) {
+  Print* p = static_cast<Print*>(fdev_get_udata(f));
+  p->print(c);
+}
+
+FILE* OpenAsFile(Print& p) {
+  FILE* f = fdevopen(WriteToPrint, nullptr);
+  fdev_set_udata(f, &p);
+  return f;
+}
+
 
 bool AlarmTriggeredForTest() {
   if (Serial.available()) {
@@ -95,9 +114,6 @@ bool AlarmTriggeredForTest() {
   return false;
 }
 
-int snoozeHours = -1;
-int snoozeMinutes = -1;
-bool snoozePM = false;
 void ExtendSnooze() {
   if (snoozeHours == -1) {
     snoozeHours = rtc.getHours();
@@ -114,27 +130,21 @@ void ExtendSnooze() {
     snoozePM = !snoozePM;
   }
 
-  char buf[17];
-  snprintf(buf, 17, "%2d:%02d %s",
+  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n",
     snoozeHours,
     snoozeMinutes,
     snoozePM ? "pm" : "am");
-  Serial.print("Snoozing until ");
-  Serial.println(buf);
 }
 
 
 
 void PrintTime() {
-  char buf[17];
-  snprintf(buf, 17, "%s %2d:%02d %s",
+  lcd.setCursor(0,0);
+  fprintf(lcd_file, "Now %s %2d:%02d %s",
     kDayNames[rtc.getWeekday()],
     rtc.getHours(),
     rtc.getMinutes(),
     rtc.isPM() ? "pm" : "am");
-  lcd.setCursor(0,0);
-  lcd.print("Now ");
-  lcd.print(buf);
 }
 
 
