@@ -6,13 +6,13 @@
 #include <stdio.h>
 
 /* I2C addresses:
- *  0x37: MP3
- *  0x4B: Keypad
- *  0x69: RTC
- *  0x6E: Blue Button
- *  0x6F: Red Button
- *  0x72: SerLCD
- */
+    0x37: MP3
+    0x4B: Keypad
+    0x69: RTC
+    0x6E: Blue Button
+    0x6F: Red Button
+    0x72: SerLCD
+*/
 
 enum AlarmState {
   WAITING,
@@ -81,16 +81,16 @@ void setup() {
   }
   if (setup_error) {
     Serial.println("Freezing");
-    while(1);
+    while (1);
   }
 
   lcd_file = OpenAsFile(lcd);
   serial_file = OpenAsFile(Serial);
-  
+
   stop_button.setDebounceTime(500);
   snooze_button.setDebounceTime(500);
   rtc.setToCompilerTime();
-  lcd.setBacklight(255,0,0);
+  lcd.setBacklight(255, 0, 0);
   state = WAITING;
 }
 
@@ -131,20 +131,20 @@ void ExtendSnooze() {
   }
 
   fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n",
-    snoozeHours,
-    snoozeMinutes,
-    snoozePM ? "pm" : "am");
+          snoozeHours,
+          snoozeMinutes,
+          snoozePM ? "pm" : "am");
 }
 
 
 
 void PrintTime() {
-  lcd.setCursor(0,0);
+  lcd.setCursor(0, 0);
   fprintf(lcd_file, "Now %s %2d:%02d %s",
-    kDayNames[rtc.getWeekday()],
-    rtc.getHours(),
-    rtc.getMinutes(),
-    rtc.isPM() ? "pm" : "am");
+          kDayNames[rtc.getWeekday()],
+          rtc.getHours(),
+          rtc.getMinutes(),
+          rtc.isPM() ? "pm" : "am");
 }
 
 
@@ -164,7 +164,7 @@ void TransitionStateTo(AlarmState new_state) {
 
   state = new_state;
   Serial.print("Moving to state ");
-  switch(state) {
+  switch (state) {
     case WAITING:
       Serial.println("WAITING");
       break;
@@ -178,7 +178,7 @@ void TransitionStateTo(AlarmState new_state) {
   }
 }
 
- 
+
 void loop() {
   rtc.updateTime();
   PrintTime();
