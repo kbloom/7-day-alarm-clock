@@ -14,10 +14,30 @@
     0x72: SerLCD
 */
 
-enum AlarmState {
+enum GlobalState {
   WAITING,
   SNOOZING,
   SOUNDING,
+};
+
+enum TimeState {
+  ACTIVE,
+  INACTIVE,
+  SKIPPED,
+  INVALID,
+};
+
+struct Time {
+  uint8_t hours;
+  uint8_t minutes;
+  uint8_t twelveHours();
+  const char* amPMString();
+  TimeState state = INACTIVE;
+  void AddMinutes(uint8_t minutes);
+  static Time FromClock();
+  bool operator==(const Time& other) {
+    return hours == other.hours && minutes == other.minutes && state == other.state;
+  }
 };
 
 int WriteToPrint(char c, FILE* f);
@@ -25,7 +45,7 @@ FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
-void TransitionStateTo(AlarmState new_state);
+void TransitionStateTo(GlobalState new_state);
 
 
 QwiicButton stop_button;
@@ -49,10 +69,8 @@ const char* kDayNames[] = {
   "Sat"
 };
 
-AlarmState state;
-int snoozeHours = -1;
-int snoozeMinutes = -1;
-bool snoozePM = false;
+GlobalState state;
+Time snooze;
 
 void setup() {
   bool setup_error = false;
@@ -115,40 +133,29 @@ bool AlarmTriggeredForTest() {
 }
 
 void ExtendSnooze() {
-  if (snoozeHours == -1) {
-    snoozeHours = rtc.getHours();
-    snoozeMinutes = rtc.getMinutes();
-    snoozePM = rtc.isPM();
+  if (snooze.state != ACTIVE) {
+    snooze = Time::FromClock();
   }
-  snoozeMinutes += 1; // TODO: Change to 8 minutes when done testing
-  if (snoozeMinutes >= 60) {
-    snoozeMinutes -= 60;
-    snoozeHours ++;
-  }
-  if (snoozeHours > 12) {
-    snoozeHours -= 12;
-    snoozePM = !snoozePM;
-  }
+  snooze.state = ACTIVE;
+  snooze.AddMinutes(1); // TODO: Change to 8 minutes when done testing
 
-  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n",
-          snoozeHours,
-          snoozeMinutes,
-          snoozePM ? "pm" : "am");
+  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.twelveHours(), snooze.minutes, snooze.amPMString());
 }
 
 
 
 void PrintTime() {
+  Time t = Time::FromClock();
   lcd.setCursor(0, 0);
   fprintf(lcd_file, "Now %s %2d:%02d %s",
           kDayNames[rtc.getWeekday()],
-          rtc.getHours(),
-          rtc.getMinutes(),
-          rtc.isPM() ? "pm" : "am");
+          t.twelveHours(),
+          t.minutes,
+          t.amPMString());
 }
 
 
-void TransitionStateTo(AlarmState new_state) {
+void TransitionStateTo(GlobalState new_state) {
   if (new_state == state) {
     return;
   }
@@ -156,7 +163,7 @@ void TransitionStateTo(AlarmState new_state) {
     mp3.stop();
   }
   if (state == SNOOZING) {
-    snoozeHours = -1;
+    snooze.state = INACTIVE;
   }
   if (new_state == SOUNDING) {
     mp3.playFile(1);
@@ -178,6 +185,43 @@ void TransitionStateTo(AlarmState new_state) {
   }
 }
 
+Time Time::FromClock() {
+  Time t;
+  t.hours = rtc.getHours();
+  t.minutes = rtc.getMinutes();
+  t.state = ACTIVE;
+  if (rtc.is12Hour() && rtc.isPM()) {
+    t.hours += 12;
+  }
+  return t;
+}
+
+void Time::AddMinutes(uint8_t minutes) {
+  this->minutes += minutes;
+  if (this->minutes >= 60) {
+    uint8_t hours = this->minutes / 60;
+    this->minutes %= 60;
+    this->hours += hours;
+    this->hours %= 24;
+  }
+}
+
+uint8_t Time::twelveHours() {
+  if (hours == 0) {
+    return 12;
+  }
+  if (hours > 12) {
+    return hours - 12;
+  }
+  return hours;
+}
+
+const char* Time::amPMString() {
+  if (hours >= 12) {
+    return "pm";
+  }
+  return "am";
+}
 
 void loop() {
   rtc.updateTime();
@@ -192,7 +236,7 @@ void loop() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SNOOZING) {
-    if (snoozeHours == rtc.getHours() && snoozeMinutes == rtc.getMinutes() && snoozePM == rtc.isPM()) {
+    if (snooze == Time::FromClock()) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
