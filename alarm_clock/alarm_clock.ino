@@ -107,7 +107,6 @@ void setup() {
 
   stop_button.setDebounceTime(500);
   snooze_button.setDebounceTime(500);
-  rtc.setToCompilerTime();
   lcd.setBacklight(255, 0, 0);
   state = WAITING;
 }
