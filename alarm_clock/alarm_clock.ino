@@ -21,28 +21,71 @@ limitations under the License.
 #include <stdio.h>
 
 /* I2C addresses:
- *  0x37: MP3
- *  0x4B: Keypad
- *  0x69: RTC
- *  0x6E: Blue Button
- *  0x6F: Red Button
- *  0x72: SerLCD
- */
+    0x37: MP3
+    0x4B: Keypad
+    0x69: RTC
+    0x6E: Blue Button
+    0x6F: Red Button
+    0x72: SerLCD
+*/
 
-QwiicButton stop_button;
-QwiicButton snooze_button;
-KEYPAD keypad;
-SerLCD lcd;
-MP3TRIGGER mp3;
-RV1805 rtc;
-
-enum AlarmState {
+enum GlobalState {
   WAITING,
   SNOOZING,
   SOUNDING,
 };
 
-AlarmState state;
+enum TimeState {
+  ACTIVE,
+  INACTIVE,
+  SKIPPED,
+  INVALID,
+};
+
+struct Time {
+  uint8_t hours;
+  uint8_t minutes;
+  uint8_t twelveHours();
+  const char* amPMString();
+  TimeState state = INACTIVE;
+  void AddMinutes(uint8_t minutes);
+  static Time FromClock();
+  bool operator==(const Time& other) {
+    return hours == other.hours && minutes == other.minutes && state == other.state;
+  }
+};
+
+int WriteToPrint(char c, FILE* f);
+FILE* OpenAsFile(Print& p);
+bool AlarmTriggeredForTest();
+void ExtendSnooze();
+void PrintTime();
+void TransitionStateTo(GlobalState new_state);
+
+
+QwiicButton stop_button;
+QwiicButton snooze_button;
+KEYPAD keypad;
+SerLCD lcd;
+FILE* lcd_file;
+FILE* serial_file;
+MP3TRIGGER mp3;
+RV1805 rtc;
+
+
+const char* kDayNames[] = {
+  "",
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat"
+};
+
+GlobalState state;
+Time snooze;
 
 void setup() {
   bool setup_error = false;
@@ -71,15 +114,29 @@ void setup() {
   }
   if (setup_error) {
     Serial.println("Freezing");
-    while(1);
+    while (1);
   }
-  
+
+  lcd_file = OpenAsFile(lcd);
+  serial_file = OpenAsFile(Serial);
+
   stop_button.setDebounceTime(500);
   snooze_button.setDebounceTime(500);
-  rtc.setToCompilerTime();
-  lcd.setBacklight(255,0,0);
+  lcd.setBacklight(255, 0, 0);
   state = WAITING;
 }
+
+int WriteToPrint(char c, FILE* f) {
+  Print* p = static_cast<Print*>(fdev_get_udata(f));
+  p->print(c);
+}
+
+FILE* OpenAsFile(Print& p) {
+  FILE* f = fdevopen(WriteToPrint, nullptr);
+  fdev_set_udata(f, &p);
+  return f;
+}
+
 
 bool AlarmTriggeredForTest() {
   if (Serial.available()) {
@@ -89,59 +146,30 @@ bool AlarmTriggeredForTest() {
   return false;
 }
 
-int snoozeHours = -1;
-int snoozeMinutes = -1;
-bool snoozePM = false;
 void ExtendSnooze() {
-  if (snoozeHours == -1) {
-    snoozeHours = rtc.getHours();
-    snoozeMinutes = rtc.getMinutes();
-    snoozePM = rtc.isPM();
+  if (snooze.state != ACTIVE) {
+    snooze = Time::FromClock();
   }
-  snoozeMinutes += 1; // TODO: Change to 8 minutes when done testing
-  if (snoozeMinutes >= 60) {
-    snoozeMinutes -= 60;
-    snoozeHours ++;
-  }
-  if (snoozeHours > 12) {
-    snoozeHours -= 12;
-    snoozePM = !snoozePM;
-  }
+  snooze.state = ACTIVE;
+  snooze.AddMinutes(1); // TODO: Change to 8 minutes when done testing
 
-  char buf[17];
-  snprintf(buf, 17, "%2d:%02d %s",
-    snoozeHours,
-    snoozeMinutes,
-    snoozePM ? "pm" : "am");
-  Serial.print("Snoozing until ");
-  Serial.println(buf);
+  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.twelveHours(), snooze.minutes, snooze.amPMString());
 }
 
-const char* kDayNames[] = {
-  "",
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat"
-};
+
 
 void PrintTime() {
-  char buf[17];
-  snprintf(buf, 17, "%s %2d:%02d %s",
-    kDayNames[rtc.getWeekday()],
-    rtc.getHours(),
-    rtc.getMinutes(),
-    rtc.isPM() ? "pm" : "am");
-  lcd.setCursor(0,0);
-  lcd.print("Now ");
-  lcd.print(buf);
+  Time t = Time::FromClock();
+  lcd.setCursor(0, 0);
+  fprintf(lcd_file, "Now %s %2d:%02d %s",
+          kDayNames[rtc.getWeekday()],
+          t.twelveHours(),
+          t.minutes,
+          t.amPMString());
 }
 
 
-void TransitionStateTo(AlarmState new_state) {
+void TransitionStateTo(GlobalState new_state) {
   if (new_state == state) {
     return;
   }
@@ -149,7 +177,7 @@ void TransitionStateTo(AlarmState new_state) {
     mp3.stop();
   }
   if (state == SNOOZING) {
-    snoozeHours = -1;
+    snooze.state = INACTIVE;
   }
   if (new_state == SOUNDING) {
     mp3.playFile(1);
@@ -157,7 +185,7 @@ void TransitionStateTo(AlarmState new_state) {
 
   state = new_state;
   Serial.print("Moving to state ");
-  switch(state) {
+  switch (state) {
     case WAITING:
       Serial.println("WAITING");
       break;
@@ -171,7 +199,44 @@ void TransitionStateTo(AlarmState new_state) {
   }
 }
 
- 
+Time Time::FromClock() {
+  Time t;
+  t.hours = rtc.getHours();
+  t.minutes = rtc.getMinutes();
+  t.state = ACTIVE;
+  if (rtc.is12Hour() && rtc.isPM()) {
+    t.hours += 12;
+  }
+  return t;
+}
+
+void Time::AddMinutes(uint8_t minutes) {
+  this->minutes += minutes;
+  if (this->minutes >= 60) {
+    uint8_t hours = this->minutes / 60;
+    this->minutes %= 60;
+    this->hours += hours;
+    this->hours %= 24;
+  }
+}
+
+uint8_t Time::twelveHours() {
+  if (hours == 0) {
+    return 12;
+  }
+  if (hours > 12) {
+    return hours - 12;
+  }
+  return hours;
+}
+
+const char* Time::amPMString() {
+  if (hours >= 12) {
+    return "pm";
+  }
+  return "am";
+}
+
 void loop() {
   rtc.updateTime();
   PrintTime();
@@ -185,7 +250,7 @@ void loop() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SNOOZING) {
-    if (snoozeHours == rtc.getHours() && snoozeMinutes == rtc.getMinutes() && snoozePM == rtc.isPM()) {
+    if (snooze == Time::FromClock()) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
