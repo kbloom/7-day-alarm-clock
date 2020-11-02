@@ -1,17 +1,17 @@
 /*
-Copyright 2020 Google LLC
+  Copyright 2020 Google LLC
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
     https://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 #include <SparkFun_Qwiic_Button.h>
 #include <SparkFun_RV1805.h>
@@ -72,7 +72,6 @@ FILE* serial_file;
 MP3TRIGGER mp3;
 RV1805 rtc;
 
-
 const char* kDayNames[] = {
   "",
   "Sun",
@@ -84,8 +83,13 @@ const char* kDayNames[] = {
   "Sat"
 };
 
+// TODO: change these when I'm done testing
+constexpr int kAlarmLength = 1;
+constexpr int kSnoozeLength = 1;
+
 GlobalState state;
 Time snooze;
+Time alarm_stop;
 
 void setup() {
   bool setup_error = false;
@@ -137,7 +141,6 @@ FILE* OpenAsFile(Print& p) {
   return f;
 }
 
-
 bool AlarmTriggeredForTest() {
   if (Serial.available()) {
     Serial.read();
@@ -151,12 +154,10 @@ void ExtendSnooze() {
     snooze = Time::FromClock();
   }
   snooze.state = ACTIVE;
-  snooze.AddMinutes(1); // TODO: Change to 8 minutes when done testing
-
+  snooze.AddMinutes(kSnoozeLength);
+  
   fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.twelveHours(), snooze.minutes, snooze.amPMString());
 }
-
-
 
 void PrintTime() {
   Time t = Time::FromClock();
@@ -168,34 +169,33 @@ void PrintTime() {
           t.amPMString());
 }
 
-
 void TransitionStateTo(GlobalState new_state) {
   if (new_state == state) {
     return;
   }
   if (state == SOUNDING) {
     mp3.stop();
+    alarm_stop.state = INACTIVE;
   }
   if (state == SNOOZING) {
     snooze.state = INACTIVE;
   }
-  if (new_state == SOUNDING) {
-    mp3.playFile(1);
-  }
 
-  state = new_state;
   Serial.print("Moving to state ");
-  switch (state) {
-    case WAITING:
-      Serial.println("WAITING");
-      break;
-    case SNOOZING:
-      Serial.println("SNOOZING");
-      ExtendSnooze();
-      break;
-    case SOUNDING:
-      Serial.println("SOUNDING");
-      break;
+  state = new_state;
+
+  if (new_state == WAITING) {
+    Serial.println("WAITING");
+  }
+  if (new_state == SOUNDING) {
+    Serial.println("SOUNDING");
+    mp3.playFile(1);
+    alarm_stop = Time::FromClock();
+    alarm_stop.AddMinutes(kAlarmLength);
+  }
+  if (new_state == SNOOZING) {
+    Serial.println("SOUNDING");
+    ExtendSnooze();
   }
 }
 
@@ -260,8 +260,16 @@ void loop() {
       ExtendSnooze();
     }
   } else if (state == SOUNDING) {
-    if (AlarmTriggeredForTest()) {
+    // I have a short MP3 that I want to repeat for a few minutes if
+    // I'm not around to stop the alarm, so we use an explicit alarm_stop timer,
+    // and if the MP3 trigger is found to not be playing, it restarts the alarm.
+    // Other arrangements are possible -- for a long MP3, you may not want to loop.
+    // In that case you can just use mp3.isPlaying() to determine when to transition back
+    // to WAITING, and ignore alarm_stop.
+    if (alarm_stop == Time::FromClock()) {
       TransitionStateTo(WAITING);
+    } else if (!mp3.isPlaying()) {
+      mp3.playFile(1);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
       mp3.stop();
