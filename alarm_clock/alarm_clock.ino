@@ -43,15 +43,15 @@ enum TimeState {
 };
 
 struct Time {
-  uint8_t hours;
+  uint8_t hours24;
   uint8_t minutes;
-  uint8_t twelveHours();
+  uint8_t hours12();
   const char* amPMString();
   TimeState state = INACTIVE;
   void AddMinutes(uint8_t minutes);
   static Time FromClock();
   bool operator==(const Time& other) {
-    return hours == other.hours && minutes == other.minutes && state == other.state;
+    return hours24 == other.hours24 && minutes == other.minutes && state == other.state;
   }
 };
 
@@ -72,8 +72,8 @@ FILE* serial_file;
 MP3TRIGGER mp3;
 RV1805 rtc;
 
+// Weekdays are numbered 0-6 on the RV1805
 const char* kDayNames[] = {
-  "",
   "Sun",
   "Mon",
   "Tue",
@@ -126,6 +126,7 @@ void setup() {
 
   stop_button.setDebounceTime(500);
   snooze_button.setDebounceTime(500);
+  rtc.set24Hour();
   lcd.setBacklight(255, 0, 0);
   state = WAITING;
 }
@@ -156,7 +157,7 @@ void ExtendSnooze() {
   snooze.state = ACTIVE;
   snooze.AddMinutes(kSnoozeLength);
   
-  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.twelveHours(), snooze.minutes, snooze.amPMString());
+  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.hours12(), snooze.minutes, snooze.amPMString());
 }
 
 void PrintTime() {
@@ -164,7 +165,7 @@ void PrintTime() {
   lcd.setCursor(0, 0);
   fprintf(lcd_file, "Now %s %2d:%02d %s",
           kDayNames[rtc.getWeekday()],
-          t.twelveHours(),
+          t.hours12(),
           t.minutes,
           t.amPMString());
 }
@@ -201,12 +202,9 @@ void TransitionStateTo(GlobalState new_state) {
 
 Time Time::FromClock() {
   Time t;
-  t.hours = rtc.getHours();
+  t.hours24 = rtc.getHours();
   t.minutes = rtc.getMinutes();
   t.state = ACTIVE;
-  if (rtc.is12Hour() && rtc.isPM()) {
-    t.hours += 12;
-  }
   return t;
 }
 
@@ -215,23 +213,23 @@ void Time::AddMinutes(uint8_t minutes) {
   if (this->minutes >= 60) {
     uint8_t hours = this->minutes / 60;
     this->minutes %= 60;
-    this->hours += hours;
-    this->hours %= 24;
+    this->hours24 += hours;
+    this->hours24 %= 24;
   }
 }
 
-uint8_t Time::twelveHours() {
-  if (hours == 0) {
+uint8_t Time::hours12() {
+  if (hours24 == 0) {
     return 12;
   }
-  if (hours > 12) {
-    return hours - 12;
+  if (hours24 > 12) {
+    return hours24 - 12;
   }
-  return hours;
+  return hours24;
 }
 
 const char* Time::amPMString() {
-  if (hours >= 12) {
+  if (hours24 >= 12) {
     return "pm";
   }
   return "am";
