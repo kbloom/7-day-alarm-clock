@@ -55,13 +55,26 @@ struct Time {
   }
 };
 
+
+struct Alarms {
+  Time alarms[7];
+  bool alarms_on;
+};
+
 int WriteToPrint(char c, FILE* f);
 FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
 void TransitionStateTo(GlobalState new_state);
-
+char ReadChar();
+Time Menu_InputTime();
+int Menu_InputWeekday();
+Time Menu_InputTime();
+void Menu_DisplayAlarm(int day);
+void Menu_ToggleAlarm(int day, int direction);
+void Menu_SetClock();
+void MenuSystem();
 
 QwiicButton stop_button;
 QwiicButton snooze_button;
@@ -90,46 +103,8 @@ constexpr int kSnoozeLength = 1;
 GlobalState state;
 Time snooze;
 Time alarm_stop;
+Alarms alarms;
 
-void setup() {
-  bool setup_error = false;
-  Serial.begin(9600);
-  Wire.begin();
-  lcd.begin(Wire);
-  if (!stop_button.begin()) {
-    Serial.println("Red Button did not acknowledge!");
-    setup_error = true;
-  }
-  if (!snooze_button.begin(0x6E)) {
-    Serial.println("Blue Button did not acknowledge!");
-    setup_error = true;
-  }
-  if (!keypad.begin()) {
-    Serial.println("Keypad did not acknowledge!");
-    // setup_error = true;  // temporarily disabled due to broken keypad
-  }
-  if (!mp3.begin()) {
-    Serial.println("MP3Trigger did not acknowledge!");
-    setup_error = true;
-  }
-  if (!rtc.begin()) {
-    Serial.println("RTC did not acknoledge!");
-    setup_error = true;
-  }
-  if (setup_error) {
-    Serial.println("Freezing");
-    while (1);
-  }
-
-  lcd_file = OpenAsFile(lcd);
-  serial_file = OpenAsFile(Serial);
-
-  stop_button.setDebounceTime(500);
-  snooze_button.setDebounceTime(500);
-  rtc.set24Hour();
-  lcd.setBacklight(255, 0, 0);
-  state = WAITING;
-}
 
 int WriteToPrint(char c, FILE* f) {
   Print* p = static_cast<Print*>(fdev_get_udata(f));
@@ -156,7 +131,7 @@ void ExtendSnooze() {
   }
   snooze.state = ACTIVE;
   snooze.AddMinutes(kSnoozeLength);
-  
+
   fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.hours12(), snooze.minutes, snooze.amPMString());
 }
 
@@ -235,11 +210,215 @@ const char* Time::amPMString() {
   return "am";
 }
 
+char ReadChar() {
+  while (1) {
+    delay(50);
+    keypad.updateFIFO();
+    if (keypad.getButton() != 0) {
+      return keypad.getButton();
+    }
+  }
+}
+
+int Menu_InputWeekday() {
+  lcd.clear();
+  lcd.println("Enter Weekday");
+  lcd.print("1=Sun -- 7=Sat");
+  char c = ReadChar();
+  if ('1' <= c && c <= '7') {
+    return c - '1';
+  }
+  lcd.clear();
+  lcd.println("Invalid time.");
+  delay(1000);
+  return -1;
+}
+
+Time Menu_InputTime() {
+  Time t;
+  t.state = INVALID;
+  lcd.clear();
+  lcd.println("Time HH:MM");
+  lcd.setCursor(0, 1);
+  lcd.println("#=< (24 hours)");
+  lcd.blink();
+  lcd.setCursor(5, 0);
+  char c[3];
+  c[2] = 0;
+
+  c[0] = ReadChar();
+  if (c[0] == '#' || c[0] == '*') goto end;
+  lcd.print(c[0]);
+
+  c[1] = ReadChar();
+  if (c[1] == '#' || c[1] == '*') goto end;
+  lcd.print(c[1]);
+  lcd.print(':');
+
+  t.hours24 = atoi(c);
+
+  c[0] = ReadChar();
+  if (c[0] == '#' || c[0] == '*') goto end;
+  lcd.print(c[0]);
+
+  c[1] = ReadChar();
+  if (c[1] == '#' || c[1] == '*') goto end;
+  lcd.print(c[1]);
+
+  t.minutes = atoi(c);
+
+  if (t.hours24 < 24 && t.minutes < 60) {
+    t.state = ACTIVE;
+  } else {
+    lcd.clear();
+    lcd.println("Invalid time.");
+    delay(1000);
+  }
+
+end:
+  lcd.noBlink();
+  return t;
+}
+
+void Menu_DisplayAlarm(int day) {
+  const Time& time = alarms.alarms[day];
+  lcd.clear();
+
+  fprintf(lcd_file, "%s %2d:%02d %s\r\n",
+          kDayNames[day], time.hours12(), time.minutes, time.amPMString());
+  if (time.state == INACTIVE) {
+    lcd.print("Off ");
+  } else {
+    lcd.print("On  ");
+  }
+}
+
+void Menu_ToggleAlarm(int day, int direction) {
+  if (alarms.alarms[day].state == INACTIVE) {
+    alarms.alarms[day].state = ACTIVE;
+  } else {
+    alarms.alarms[day].state = INACTIVE;
+  }
+}
+
+void Menu_SetClock() {
+  int d = Menu_InputWeekday();
+  if (d == -1) return;
+  Time t = Menu_InputTime();
+  if (t.state == INVALID) return;
+  rtc.setTime(0, 0, t.minutes, t.hours24, 1, 1, 2000, d);
+}
+
+void MenuSystem() {
+  int cur = -2;
+  while (true) {
+    lcd.clear();
+    if (cur == -2) {
+      PrintTime();
+      lcd.print("Set Clock");
+    }
+    if (cur == -1) {
+      if (alarms.alarms_on) {
+        lcd.println("Alarms Enabled");
+      } else {
+        lcd.println("Alarms Disabled");
+      }
+    }
+    if (0 <= cur && cur <= 6) {
+      Menu_DisplayAlarm(cur);
+    }
+    if (cur == 7) {
+      lcd.println("Volume");
+    }
+    if (cur == 8) {
+      lcd.println("Eq");
+    }
+    char c = ReadChar();
+    if (c == '#' || c == '*') {
+      break;
+    } else if (c == '2') {
+      cur--;
+    } else if (c == '8') {
+      cur++;
+    } else if (0 <= cur && cur <= 6) {
+      if (c == '5') {
+        Time t = Menu_InputTime();
+        if (t.state != INVALID) {
+          t.state = alarms.alarms[cur].state;
+          alarms.alarms[cur] = t;
+        }
+      }
+      if (c == '4') {
+        Menu_ToggleAlarm(cur, -1);
+      }
+      if (c == '6') {
+        Menu_ToggleAlarm(cur, 1);
+      }
+    } else if (cur == -2 && c == '5') {
+      Menu_SetClock();
+    } else if (cur == -1 && c == '4' || c == '5' || c == '6') {
+      alarms.alarms_on = !alarms.alarms_on;
+    }
+
+    if (cur < -2) {
+      cur = 8;
+    }
+    if (cur > 8) {
+      cur = -2;
+    }
+  }
+  lcd.clear();
+}
+
+
+void setup() {
+  bool setup_error = false;
+  Serial.begin(9600);
+  Wire.begin();
+  lcd.begin(Wire);
+  if (!stop_button.begin()) {
+    Serial.println("Red Button did not acknowledge!");
+    setup_error = true;
+  }
+  if (!snooze_button.begin(0x6E)) {
+    Serial.println("Blue Button did not acknowledge!");
+    setup_error = true;
+  }
+  if (!keypad.begin()) {
+    Serial.println("Keypad did not acknowledge!");
+    // setup_error = true;  // temporarily disabled due to broken keypad
+  }
+  if (!mp3.begin()) {
+    Serial.println("MP3Trigger did not acknowledge!");
+    setup_error = true;
+  }
+  if (!rtc.begin()) {
+    Serial.println("RTC did not acknoledge!");
+    setup_error = true;
+  }
+  if (setup_error) {
+    Serial.println("Freezing");
+    while (1);
+  }
+
+  lcd_file = OpenAsFile(lcd);
+  serial_file = OpenAsFile(Serial);
+
+  stop_button.setDebounceTime(500);
+  snooze_button.setDebounceTime(500);
+  rtc.set24Hour();
+  lcd.setBacklight(255, 0, 0);
+  state = WAITING;
+}
+
 void loop() {
+  keypad.updateFIFO();
   rtc.updateTime();
   PrintTime();
   if (state == WAITING) {
-    if (AlarmTriggeredForTest()) {
+    if (keypad.getButton() != 0) {
+      MenuSystem();
+    } else if (AlarmTriggeredForTest()) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
