@@ -53,6 +53,15 @@ struct Time {
   bool operator==(const Time& other) {
     return hours24 == other.hours24 && minutes == other.minutes && state == other.state;
   }
+  bool operator<(const Time& other) {
+    if (hours24 < other.hours24) {
+      return true;
+    }
+    if (hours24 == other.hours24) {
+      return minutes < other.minutes;
+    }
+    return false;
+  }
 };
 
 
