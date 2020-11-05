@@ -1,17 +1,17 @@
 /*
-Copyright 2020 Google LLC
+  Copyright 2020 Google LLC
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
     https://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 #include <stdio.h>
 #include <SerLCD.h>
@@ -45,7 +45,7 @@ FILE* OpenAsFile(Print& p) {
 }
 
 char ReadChar() {
-  while(1) {
+  while (1) {
     delay(50);
     keypad.updateFIFO();
     if (keypad.getButton() != 0) {
@@ -69,7 +69,7 @@ struct Time {
   const char* amPMString();
 };
 
-Time InputTime();
+Time Menu_InputTime();
 
 uint8_t Time::hours12() {
   if (hours24 == 0) {
@@ -95,19 +95,34 @@ struct Alarms {
 
 Alarms alarms;
 
-void DisplayAlarm(int day) {
+int Menu_InputWeekday() {
+  lcd.clear();
+  lcd.println("Enter Weekday");
+  lcd.print("1=Sun -- 7=Sat");
+  char c = ReadChar();
+  if ('1' <= c && c <= '7') {
+    return c - '1';
+  }
+  lcd.clear();
+  lcd.println("Invalid time.");
+  delay(1000);
+  return -1;
+}
+
+void Menu_DisplayAlarm(int day) {
   const Time& time = alarms.alarms[day];
   lcd.clear();
-  fprintf(lcd_file, "%s % 2d:%02d %s\r\n", 
-       kDayNames[day], time.hours12(), time.minutes, time.amPMString());
+
+  fprintf(lcd_file, "%s %2d:%02d %s\r\n",
+          kDayNames[day], time.hours12(), time.minutes, time.amPMString());
   if (time.state == INACTIVE) {
-    lcd.print("Off");
+    lcd.print("Off ");
   } else {
-    lcd.print("On");
+    lcd.print("On  ");
   }
 }
 
-void ToggleAlarm(int day, int direction) {
+void Menu_ToggleAlarm(int day, int direction) {
   if (alarms.alarms[day].state == INACTIVE) {
     alarms.alarms[day].state = ACTIVE;
   } else {
@@ -115,29 +130,39 @@ void ToggleAlarm(int day, int direction) {
   }
 }
 
-
+void Menu_SetClock() {
+  int d = Menu_InputWeekday();
+  if (d == -1) return;
+  Time t = Menu_InputTime();
+  if (t.state == INVALID) return;
+  lcd.println("Would set clock");
+}
 
 void MenuSystem() {
-  int cur = 0;
-  while(true) {
+  int cur = -2;
+  while (true) {
     lcd.clear();
     if (cur == -2) {
       lcd.println("Would print RTC time");
     }
     if (cur == -1) {
-      lcd.println("All on / all off");
+      if (alarms.alarms_on) {
+        lcd.println("Alarms Enabled");
+      } else {
+        lcd.println("Alarms Disabled");
+      }
     }
     if (0 <= cur && cur <= 6) {
-      DisplayAlarm(cur);
+      Menu_DisplayAlarm(cur);
     }
-    if ( cur == 7) {
+    if (cur == 7) {
       lcd.println("Volume");
     }
-    if ( cur == 8) {
+    if (cur == 8) {
       lcd.println("Eq");
     }
     char c = ReadChar();
-    if (c == '#' || c== '*') {
+    if (c == '#' || c == '*') {
       break;
     } else if (c == '2') {
       cur--;
@@ -145,18 +170,22 @@ void MenuSystem() {
       cur++;
     } else if (0 <= cur && cur <= 6) {
       if (c == '5') {
-        Time t = InputTime();
+        Time t = Menu_InputTime();
         if (t.state != INVALID) {
           t.state = alarms.alarms[cur].state;
           alarms.alarms[cur] = t;
         }
       }
       if (c == '4') {
-        ToggleAlarm(cur, -1);
+        Menu_ToggleAlarm(cur, -1);
       }
       if (c == '6') {
-        ToggleAlarm(cur, 1);
+        Menu_ToggleAlarm(cur, 1);
       }
+    } else if (cur == -2 && c == '5') {
+      Menu_SetClock();
+    } else if (cur == -1 && c == '4' || c == '5' || c == '6') {
+      alarms.alarms_on = !alarms.alarms_on;
     }
 
     if (cur < -2) {
@@ -173,17 +202,17 @@ Time InputTime() {
   t.state = INVALID;
   lcd.clear();
   lcd.println("Time HH:MM");
-  lcd.setCursor(0,1);
+  lcd.setCursor(0, 1);
   lcd.println("#=< (24 hours)");
   lcd.blink();
   lcd.setCursor(5, 0);
   char c[3];
   c[2] = 0;
-  
+
   c[0] = ReadChar();
   if (c[0] == '#' || c[0] == '*') goto end;
-  lcd.print(c[0]);  
-  
+  lcd.print(c[0]);
+
   c[1] = ReadChar();
   if (c[1] == '#' || c[1] == '*') goto end;
   lcd.print(c[1]);
@@ -193,8 +222,8 @@ Time InputTime() {
 
   c[0] = ReadChar();
   if (c[0] == '#' || c[0] == '*') goto end;
-  lcd.print(c[0]);  
-  
+  lcd.print(c[0]);
+
   c[1] = ReadChar();
   if (c[1] == '#' || c[1] == '*') goto end;
   lcd.print(c[1]);
@@ -209,7 +238,7 @@ Time InputTime() {
     delay(1000);
   }
 
- end:
+end:
   lcd.noBlink();
   return t;
 }
@@ -217,30 +246,30 @@ Time InputTime() {
 void InputDate() {
   lcd.clear();
   lcd.println("Date YYYY-MM-DD");
-  lcd.setCursor(0,1);
+  lcd.setCursor(0, 1);
   lcd.println("#=<");
   lcd.blink();
   lcd.setCursor(5, 0);
   char c;
   if ((c = ReadChar()) == '#') goto end;
-  lcd.print(c);  
+  lcd.print(c);
   if ((c = ReadChar()) == '#') goto end;
   lcd.print(c);
   if ((c = ReadChar()) == '#') goto end;
-  lcd.print(c);  
-  if ((c = ReadChar()) == '#') goto end;
   lcd.print(c);
-  lcd.print('-');
-  if ((c = ReadChar()) == '#') goto end;
-  lcd.print(c);  
   if ((c = ReadChar()) == '#') goto end;
   lcd.print(c);
   lcd.print('-');
   if ((c = ReadChar()) == '#') goto end;
-  lcd.print(c);  
+  lcd.print(c);
   if ((c = ReadChar()) == '#') goto end;
   lcd.print(c);
- end:
+  lcd.print('-');
+  if ((c = ReadChar()) == '#') goto end;
+  lcd.print(c);
+  if ((c = ReadChar()) == '#') goto end;
+  lcd.print(c);
+end:
   lcd.noBlink();
 }
 
@@ -251,7 +280,7 @@ void setup() {
   lcd_file = OpenAsFile(lcd);
   keypad.begin();
 
-  lcd.setBacklight(255,0,0);
+  lcd.setBacklight(255, 0, 0);
   MenuSystem();
   lcd.clear();
   lcd.println("Done");
