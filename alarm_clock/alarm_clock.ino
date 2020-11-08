@@ -151,9 +151,8 @@ const char* kDayNames[] = {
   "Sat"
 };
 
-// TODO: change these when I'm done testing
-constexpr int kAlarmLength = 1;
-constexpr int kSnoozeLength = 1;
+constexpr int kAlarmLength = 5;
+constexpr int kSnoozeLength = 8;
 
 GlobalState state;
 Time snooze;
