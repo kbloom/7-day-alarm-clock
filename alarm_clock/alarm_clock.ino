@@ -126,6 +126,8 @@ void PrintTime();
 void TransitionStateTo(GlobalState new_state);
 Time& TodaysAlarm();
 bool AlarmNow();
+int NextAlarmDay();
+void PrintNextAlarm();
 
 QwiicButton stop_button;
 QwiicButton snooze_button;
@@ -196,6 +198,25 @@ void PrintTime() {
           t.amPMString());
 }
 
+void PrintNextAlarm() {
+  int day = NextAlarmDay();
+  if (day == -1) {
+    return;
+  }
+  lcd.setCursor(0, 1);
+  const Time& t = persistent_settings.alarms[day];
+  if (t.state == ACTIVE) {
+    lcd.print("Nxt ");
+  } else if (t.state == SKIPPED) {
+    lcd.print("Skp ");
+  }
+  fprintf(lcd_file, "%s %2d:%02d %s",
+          kDayNames[day],
+          t.hours12(),
+          t.minutes,
+          t.amPMString());
+}
+
 void TransitionStateTo(GlobalState new_state) {
   if (new_state == state) {
     return;
@@ -224,6 +245,21 @@ void TransitionStateTo(GlobalState new_state) {
     Serial.println("SOUNDING");
     ExtendSnooze();
   }
+}
+
+int NextAlarmDay() {
+  if (persistent_settings.alarms_off) return -1;
+  int today = rtc.getWeekday();
+  if (TodaysAlarm() < Time::FromClock()) {
+    today = (today + 1) % 7;
+  }
+  for (int i = 0; i < 7; i++) {
+    int cur_day = (today + i) % 7;
+    if (persistent_settings.alarms[cur_day].state != INACTIVE) {
+      return cur_day;
+    }
+  }
+  return -1;
 }
 
 Time& TodaysAlarm() {
@@ -482,6 +518,7 @@ void loop() {
   keypad.updateFIFO();
   rtc.updateTime();
   PrintTime();
+  PrintNextAlarm();
   if (state == WAITING) {
     if (AlarmNow()) {
       TransitionStateTo(SOUNDING);
