@@ -124,6 +124,8 @@ bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
 void TransitionStateTo(GlobalState new_state);
+Time& TodaysAlarm();
+bool AlarmNow();
 
 QwiicButton stop_button;
 QwiicButton snooze_button;
@@ -224,6 +226,11 @@ void TransitionStateTo(GlobalState new_state) {
   }
 }
 
+Time& TodaysAlarm() {
+  return persistent_settings.alarms[rtc.getWeekday()];
+}
+
+
 Time Time::FromClock() {
   Time t;
   t.hours24 = rtc.getHours();
@@ -257,6 +264,22 @@ const char* Time::amPMString() {
     return "pm";
   }
   return "am";
+}
+
+bool AlarmNow() {
+  const Time& alarm = TodaysAlarm();
+  return !persistent_settings.alarms_off &&
+         alarm.state == ACTIVE &&
+         alarm == Time::FromClock() &&
+         rtc.getSeconds() == 0;
+  // If the user stops the alarm within 1
+  // minute of it triggering, it is still true that
+  // time == Time::FromClock(), and we've returned
+  // to the WAITING state, so the alarm will just start
+  // sounding again. The check for rtc.getSeconds() == 0
+  // prevents that by only allowing us to start the alarm
+  // in the first second of the minute. I think it's safe to
+  // assume that the user won't react within one second.
 }
 
 namespace menu {
@@ -391,7 +414,6 @@ void AllAlarms::Handle(char c) {
   }
 }
 
-
 void Run(const Item** items, const int n) {
   int cur = 0;
   while (true) {
@@ -414,7 +436,6 @@ void Run(const Item** items, const int n) {
 }
 
 } // namespace menu
-
 
 void setup() {
   bool setup_error = false;
@@ -462,11 +483,11 @@ void loop() {
   rtc.updateTime();
   PrintTime();
   if (state == WAITING) {
-    if (keypad.getButton() != 0) {
+    if (AlarmNow()) {
+      TransitionStateTo(SOUNDING);
+    } else if (keypad.getButton() != 0) {
       menu::Run(menu::main, menu::kMainLength);
       EEPROM.put(0, persistent_settings);
-    } else if (AlarmTriggeredForTest()) {
-      TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
     } else if (snooze_button.hasBeenClicked()) {
