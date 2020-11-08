@@ -123,11 +123,11 @@ FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
+void PrintNextAlarm();
 void TransitionStateTo(GlobalState new_state);
 Time& TodaysAlarm();
 bool AlarmNow();
 int NextAlarmDay();
-void PrintNextAlarm();
 void ToggleSkipped();
 void MaybeResetSkipped();
 
@@ -267,6 +267,40 @@ Time& TodaysAlarm() {
   return persistent_settings.alarms[rtc.getWeekday()];
 }
 
+bool AlarmNow() {
+  const Time& alarm = TodaysAlarm();
+  return !persistent_settings.alarms_off &&
+         alarm.state == ACTIVE &&
+         alarm == Time::FromClock() &&
+         rtc.getSeconds() == 0;
+  // If the user stops the alarm within 1
+  // minute of it triggering, it is still true that
+  // time == Time::FromClock(), and we've returned
+  // to the WAITING state, so the alarm will just start
+  // sounding again. The check for rtc.getSeconds() == 0
+  // prevents that by only allowing us to start the alarm
+  // in the first second of the minute. I think it's safe to
+  // assume that the user won't react within one second.
+}
+
+void ToggleSkipped() {
+  int day = NextAlarmDay();
+  if (day == -1) return;
+  Time& t = persistent_settings.alarms[day];
+  if (t.state == ACTIVE) t.state = SKIPPED;
+  else if (t.state == SKIPPED) t.state = ACTIVE;
+  EEPROM.put(0, persistent_settings);
+}
+
+void MaybeResetSkipped() {
+  Time& alarm = TodaysAlarm();
+  Time now = Time::FromClock();
+  now.state = SKIPPED;
+  if (alarm == now && rtc.getSeconds() == 1) {
+    alarm.state = ACTIVE;
+    EEPROM.put(0, persistent_settings);
+  }
+}
 
 Time Time::FromClock() {
   Time t;
@@ -301,41 +335,6 @@ const char* Time::amPMString() {
     return "pm";
   }
   return "am";
-}
-
-bool AlarmNow() {
-  const Time& alarm = TodaysAlarm();
-  return !persistent_settings.alarms_off &&
-         alarm.state == ACTIVE &&
-         alarm == Time::FromClock() &&
-         rtc.getSeconds() == 0;
-  // If the user stops the alarm within 1
-  // minute of it triggering, it is still true that
-  // time == Time::FromClock(), and we've returned
-  // to the WAITING state, so the alarm will just start
-  // sounding again. The check for rtc.getSeconds() == 0
-  // prevents that by only allowing us to start the alarm
-  // in the first second of the minute. I think it's safe to
-  // assume that the user won't react within one second.
-}
-
-void ToggleSkipped() {
-  int day = NextAlarmDay();
-  if (day == -1) return;
-  Time& t = persistent_settings.alarms[day];
-  if (t.state == ACTIVE) t.state = SKIPPED;
-  else if (t.state == SKIPPED) t.state = ACTIVE;
-  EEPROM.put(0, persistent_settings);
-}
-
-void MaybeResetSkipped() {
-  Time& alarm = TodaysAlarm();
-  Time adjustment_time = alarm;
-  adjustment_time.AddMinutes(1);
-  if (adjustment_time == Time::FromClock() && rtc.getSeconds() == 0 && alarm.state == SKIPPED) {
-    alarm.state = ACTIVE;
-    EEPROM.put(0, persistent_settings);
-  }
 }
 
 namespace menu {
