@@ -128,6 +128,8 @@ Time& TodaysAlarm();
 bool AlarmNow();
 int NextAlarmDay();
 void PrintNextAlarm();
+void ToggleSkipped();
+void MaybeResetSkipped();
 
 QwiicButton stop_button;
 QwiicButton snooze_button;
@@ -316,6 +318,25 @@ bool AlarmNow() {
   // prevents that by only allowing us to start the alarm
   // in the first second of the minute. I think it's safe to
   // assume that the user won't react within one second.
+}
+
+void ToggleSkipped() {
+  int day = NextAlarmDay();
+  if (day == -1) return;
+  Time& t = persistent_settings.alarms[day];
+  if (t.state == ACTIVE) t.state = SKIPPED;
+  else if (t.state == SKIPPED) t.state = ACTIVE;
+  EEPROM.put(0, persistent_settings);
+}
+
+void MaybeResetSkipped() {
+  Time& alarm = TodaysAlarm();
+  Time adjustment_time = alarm;
+  adjustment_time.AddMinutes(1);
+  if (adjustment_time == Time::FromClock() && rtc.getSeconds() == 0 && alarm.state == SKIPPED) {
+    alarm.state = ACTIVE;
+    EEPROM.put(0, persistent_settings);
+  }
 }
 
 namespace menu {
@@ -517,6 +538,7 @@ void setup() {
 void loop() {
   keypad.updateFIFO();
   rtc.updateTime();
+  MaybeResetSkipped();
   PrintTime();
   PrintNextAlarm();
   if (state == WAITING) {
@@ -527,6 +549,7 @@ void loop() {
       EEPROM.put(0, persistent_settings);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
+      ToggleSkipped();
     } else if (snooze_button.hasBeenClicked()) {
       snooze_button.clearEventBits();
       TransitionStateTo(SNOOZING);
