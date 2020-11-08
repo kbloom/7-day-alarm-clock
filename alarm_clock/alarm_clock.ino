@@ -39,7 +39,6 @@ enum TimeState {
   ACTIVE,
   INACTIVE,
   SKIPPED,
-  INVALID,
 };
 
 struct Time {
@@ -77,11 +76,11 @@ void ExtendSnooze();
 void PrintTime();
 void TransitionStateTo(GlobalState new_state);
 char ReadChar();
-Time Menu_InputTime();
+bool Menu_InputTime(Time& result);
 int Menu_InputWeekday();
 Time Menu_InputTime();
 void Menu_DisplayAlarm(int day);
-void Menu_ToggleAlarm(int day, int direction);
+void Menu_ToggleAlarm(Time& t, int direction);
 void Menu_SetClock();
 void MenuSystem();
 
@@ -243,9 +242,8 @@ int Menu_InputWeekday() {
   return -1;
 }
 
-Time Menu_InputTime() {
+bool Menu_InputTime(Time& result) {
   Time t;
-  t.state = INVALID;
   lcd.clear();
   lcd.println("Time HH:MM");
   lcd.setCursor(0, 1);
@@ -256,37 +254,41 @@ Time Menu_InputTime() {
   c[2] = 0;
 
   c[0] = ReadChar();
-  if (c[0] == '#' || c[0] == '*') goto end;
+  if (c[0] == '#' || c[0] == '*') goto user_exit;
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (c[1] == '#' || c[1] == '*') goto end;
+  if (c[1] == '#' || c[1] == '*') goto user_exit;
   lcd.print(c[1]);
   lcd.print(':');
 
   t.hours24 = atoi(c);
 
   c[0] = ReadChar();
-  if (c[0] == '#' || c[0] == '*') goto end;
+  if (c[0] == '#' || c[0] == '*') goto user_exit;
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (c[1] == '#' || c[1] == '*') goto end;
+  if (c[1] == '#' || c[1] == '*') goto user_exit;
   lcd.print(c[1]);
 
   t.minutes = atoi(c);
+  lcd.noBlink();
+  t.state = ACTIVE;
 
-  if (t.hours24 < 24 && t.minutes < 60) {
-    t.state = ACTIVE;
-  } else {
+  if (t.hours24 >= 24 || t.minutes >= 60) {
     lcd.clear();
     lcd.println("Invalid time.");
     delay(1000);
+    return false;
   }
 
-end:
+  result = t;
+  return true;
+
+user_exit:
   lcd.noBlink();
-  return t;
+  return false;
 }
 
 void Menu_DisplayAlarm(int day) {
@@ -302,19 +304,21 @@ void Menu_DisplayAlarm(int day) {
   }
 }
 
-void Menu_ToggleAlarm(int day, int direction) {
-  if (alarms.alarms[day].state == INACTIVE) {
-    alarms.alarms[day].state = ACTIVE;
+void Menu_ToggleAlarm(Time& t, int direction) {
+  if (t.state == INACTIVE) {
+    t.state = ACTIVE;
   } else {
-    alarms.alarms[day].state = INACTIVE;
+    t.state = INACTIVE;
   }
 }
 
 void Menu_SetClock() {
   int d = Menu_InputWeekday();
   if (d == -1) return;
-  Time t = Menu_InputTime();
-  if (t.state == INVALID) return;
+  Time t;
+  if (!Menu_InputTime(t)) {
+    return;
+  }
   rtc.setTime(0, 0, t.minutes, t.hours24, 1, 1, 2000, d);
 }
 
@@ -350,18 +354,15 @@ void MenuSystem() {
     } else if (c == '8') {
       cur++;
     } else if (0 <= cur && cur <= 6) {
+      Time& alarm = alarms.alarms[cur];
       if (c == '5') {
-        Time t = Menu_InputTime();
-        if (t.state != INVALID) {
-          t.state = alarms.alarms[cur].state;
-          alarms.alarms[cur] = t;
-        }
+        Menu_InputTime(alarm);
       }
       if (c == '4') {
-        Menu_ToggleAlarm(cur, -1);
+        Menu_ToggleAlarm(alarm, -1);
       }
       if (c == '6') {
-        Menu_ToggleAlarm(cur, 1);
+        Menu_ToggleAlarm(alarm, 1);
       }
     } else if (cur == -2 && c == '5') {
       Menu_SetClock();
