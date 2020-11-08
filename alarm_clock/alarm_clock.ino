@@ -69,20 +69,60 @@ struct Alarms {
   bool alarms_on;
 };
 
+namespace menu {
+
+char ReadChar();
+bool InputTime(Time& result);
+int InputWeekday();
+
+struct Item {
+  virtual void Display() {}
+  virtual void Handle(char c) {}
+};
+
+struct SetClock : public Item {
+  void Display() override;
+  void Handle(char c) override;
+};
+
+struct AllAlarms : public Item {
+  void Display() override;
+  void Handle(char c) override;
+};
+
+struct SetAlarm : public Item {
+    SetAlarm(int day);
+    void Display() override;
+    void Handle(char c) override;
+  private:
+    int day_;
+};
+
+void Run(const Item** items, int n);
+
+const Item* main[] = {
+  new SetClock,
+  new AllAlarms,
+  new SetAlarm(0),
+  new SetAlarm(1),
+  new SetAlarm(2),
+  new SetAlarm(3),
+  new SetAlarm(4),
+  new SetAlarm(5),
+  new SetAlarm(6),
+};
+
+constexpr int kMainLength = sizeof(main) / sizeof(Item*);
+
+} // namespace menu
+
+
 int WriteToPrint(char c, FILE* f);
 FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
 void TransitionStateTo(GlobalState new_state);
-char ReadChar();
-bool Menu_InputTime(Time& result);
-int Menu_InputWeekday();
-Time Menu_InputTime();
-void Menu_DisplayAlarm(int day);
-void Menu_ToggleAlarm(Time& t, int direction);
-void Menu_SetClock();
-void MenuSystem();
 
 QwiicButton stop_button;
 QwiicButton snooze_button;
@@ -218,6 +258,8 @@ const char* Time::amPMString() {
   return "am";
 }
 
+namespace menu {
+
 char ReadChar() {
   while (1) {
     delay(50);
@@ -228,7 +270,7 @@ char ReadChar() {
   }
 }
 
-int Menu_InputWeekday() {
+int InputWeekday() {
   lcd.clear();
   lcd.println("Enter Weekday");
   lcd.print("1=Sun -- 7=Sat");
@@ -242,7 +284,7 @@ int Menu_InputWeekday() {
   return -1;
 }
 
-bool Menu_InputTime(Time& result) {
+bool InputTime(Time& result) {
   Time t;
   lcd.clear();
   lcd.println("Time HH:MM");
@@ -291,12 +333,14 @@ user_exit:
   return false;
 }
 
-void Menu_DisplayAlarm(int day) {
-  const Time& time = alarms.alarms[day];
+SetAlarm::SetAlarm(int day) : day_(day) {}
+
+void SetAlarm::Display() {
+  const Time& time = alarms.alarms[day_];
   lcd.clear();
 
   fprintf(lcd_file, "%s %2d:%02d %s\r\n",
-          kDayNames[day], time.hours12(), time.minutes, time.amPMString());
+          kDayNames[day_], time.hours12(), time.minutes, time.amPMString());
   if (time.state == INACTIVE) {
     lcd.print("Off ");
   } else {
@@ -304,81 +348,71 @@ void Menu_DisplayAlarm(int day) {
   }
 }
 
-void Menu_ToggleAlarm(Time& t, int direction) {
-  if (t.state == INACTIVE) {
-    t.state = ACTIVE;
-  } else {
-    t.state = INACTIVE;
+void SetAlarm::Handle(char c) {
+  Time& alarm = alarms.alarms[day_];
+  if (c == '5') {
+    InputTime(alarm);
+  }
+  if (c == '4' || c == '6') {
+    if (alarm.state == INACTIVE) {
+      alarm.state = ACTIVE;
+    } else {
+      alarm.state = INACTIVE;
+    }
   }
 }
 
-void Menu_SetClock() {
-  int d = Menu_InputWeekday();
+void SetClock::Display() {
+  PrintTime();
+  lcd.print("Set Clock");
+}
+
+void SetClock::Handle(char c) {
+  if (c != '5') return;
+  int d = InputWeekday();
   if (d == -1) return;
   Time t;
-  if (!Menu_InputTime(t)) {
-    return;
-  }
+  if (!InputTime(t)) return;
   rtc.setTime(0, 0, t.minutes, t.hours24, 1, 1, 2000, d);
 }
 
-void MenuSystem() {
-  int cur = -2;
+void AllAlarms::Display() {
+  if (alarms.alarms_on) {
+    lcd.println("Alarms Enabled");
+  } else {
+    lcd.println("Alarms Disabled");
+  }
+}
+
+void AllAlarms::Handle(char c) {
+  if (c == '4' || c == '5' || c == '6') {
+    alarms.alarms_on = !alarms.alarms_on;
+  }
+}
+
+
+void Run(const Item** items, const int n) {
+  int cur = 0;
   while (true) {
     lcd.clear();
-    if (cur == -2) {
-      PrintTime();
-      lcd.print("Set Clock");
-    }
-    if (cur == -1) {
-      if (alarms.alarms_on) {
-        lcd.println("Alarms Enabled");
-      } else {
-        lcd.println("Alarms Disabled");
-      }
-    }
-    if (0 <= cur && cur <= 6) {
-      Menu_DisplayAlarm(cur);
-    }
-    if (cur == 7) {
-      lcd.println("Volume");
-    }
-    if (cur == 8) {
-      lcd.println("Eq");
-    }
-    char c = ReadChar();
+    items[cur]->Display();
+    const char c = ReadChar();
     if (c == '#' || c == '*') {
       break;
-    } else if (c == '2') {
-      cur--;
-    } else if (c == '8') {
-      cur++;
-    } else if (0 <= cur && cur <= 6) {
-      Time& alarm = alarms.alarms[cur];
-      if (c == '5') {
-        Menu_InputTime(alarm);
-      }
-      if (c == '4') {
-        Menu_ToggleAlarm(alarm, -1);
-      }
-      if (c == '6') {
-        Menu_ToggleAlarm(alarm, 1);
-      }
-    } else if (cur == -2 && c == '5') {
-      Menu_SetClock();
-    } else if (cur == -1 && c == '4' || c == '5' || c == '6') {
-      alarms.alarms_on = !alarms.alarms_on;
     }
-
-    if (cur < -2) {
-      cur = 8;
+    if (c == '2' || c == '8') {
+      if (c == '2') cur--;
+      if (c == '8') cur++;
+      if (cur < 0) cur = 0;
+      if (cur >= n) cur = n - 1;
+      continue;
     }
-    if (cur > 8) {
-      cur = -2;
-    }
+    items[cur]->Handle(c);
   }
   lcd.clear();
 }
+
+} // namespace menu
 
 
 void setup() {
@@ -427,7 +461,7 @@ void loop() {
   PrintTime();
   if (state == WAITING) {
     if (keypad.getButton() != 0) {
-      MenuSystem();
+      menu::Run(menu::main, menu::kMainLength);
     } else if (AlarmTriggeredForTest()) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
