@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+#include <EEPROM.h>
 #include <SparkFun_Qwiic_Button.h>
 #include <SparkFun_RV1805.h>
 #include <SparkFun_Qwiic_MP3_Trigger_Arduino_Library.h>
@@ -36,8 +37,8 @@ enum GlobalState {
 };
 
 enum TimeState {
-  ACTIVE,
   INACTIVE,
+  ACTIVE,
   SKIPPED,
 };
 
@@ -64,9 +65,9 @@ struct Time {
 };
 
 
-struct Alarms {
+struct PersistentSettings {
   Time alarms[7];
-  bool alarms_on;
+  bool alarms_off;
 };
 
 namespace menu {
@@ -151,7 +152,7 @@ constexpr int kSnoozeLength = 1;
 GlobalState state;
 Time snooze;
 Time alarm_stop;
-Alarms alarms;
+PersistentSettings persistent_settings;
 
 
 int WriteToPrint(char c, FILE* f) {
@@ -336,7 +337,7 @@ user_exit:
 SetAlarm::SetAlarm(int day) : day_(day) {}
 
 void SetAlarm::Display() {
-  const Time& time = alarms.alarms[day_];
+  const Time& time = persistent_settings.alarms[day_];
   lcd.clear();
 
   fprintf(lcd_file, "%s %2d:%02d %s\r\n",
@@ -349,7 +350,7 @@ void SetAlarm::Display() {
 }
 
 void SetAlarm::Handle(char c) {
-  Time& alarm = alarms.alarms[day_];
+  Time& alarm = persistent_settings.alarms[day_];
   if (c == '5') {
     InputTime(alarm);
   }
@@ -377,16 +378,16 @@ void SetClock::Handle(char c) {
 }
 
 void AllAlarms::Display() {
-  if (alarms.alarms_on) {
-    lcd.println("Alarms Enabled");
+  if (persistent_settings.alarms_off) {
+    lcd.println("Alarm Disabled");
   } else {
-    lcd.println("Alarms Disabled");
+    lcd.println("Alarm Enabled");
   }
 }
 
 void AllAlarms::Handle(char c) {
   if (c == '4' || c == '5' || c == '6') {
-    alarms.alarms_on = !alarms.alarms_on;
+    persistent_settings.alarms_off = !persistent_settings.alarms_off;
   }
 }
 
@@ -417,6 +418,7 @@ void Run(const Item** items, const int n) {
 
 void setup() {
   bool setup_error = false;
+  EEPROM.get(0, persistent_settings);
   Serial.begin(9600);
   Wire.begin();
   lcd.begin(Wire);
@@ -462,6 +464,7 @@ void loop() {
   if (state == WAITING) {
     if (keypad.getButton() != 0) {
       menu::Run(menu::main, menu::kMainLength);
+      EEPROM.put(0, persistent_settings);
     } else if (AlarmTriggeredForTest()) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
