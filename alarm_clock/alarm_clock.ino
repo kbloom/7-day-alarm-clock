@@ -185,10 +185,10 @@ void PrintTime() {
   Time t = Time::FromClock();
   lcd.setCursor(0, 0);
   fprintf_P(lcd_file, PSTR("Now %s %2d:%02d %s"),
-          kDayNames[rtc.getWeekday()],
-          t.hours12(),
-          t.minutes,
-          t.amPMString());
+            kDayNames[rtc.getWeekday()],
+            t.hours12(),
+            t.minutes,
+            t.amPMString());
 }
 
 void PrintNextAlarm() {
@@ -204,10 +204,10 @@ void PrintNextAlarm() {
     lcd.print(F("Skp "));
   }
   fprintf_P(lcd_file, PSTR("%s %2d:%02d %s"),
-          kDayNames[day],
-          t.hours12(),
-          t.minutes,
-          t.amPMString());
+            kDayNames[day],
+            t.hours12(),
+            t.minutes,
+            t.amPMString());
 }
 
 void TransitionStateTo(GlobalState new_state) {
@@ -409,7 +409,7 @@ void SetAlarm::Display() {
   lcd.clear();
 
   fprintf_P(lcd_file, PSTR("%s %2d:%02d %s\r\n"),
-          kDayNames[day_], time.hours12(), time.minutes, time.amPMString());
+            kDayNames[day_], time.hours12(), time.minutes, time.amPMString());
   if (time.state == INACTIVE) {
     lcd.print(F("Off "));
   } else {
