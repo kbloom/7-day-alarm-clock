@@ -52,7 +52,7 @@ struct Time {
   void AddMinutes(uint8_t minutes);
   static Time FromClock();
   bool operator==(const Time& other) {
-    return hours24 == other.hours24 && minutes == other.minutes && state == other.state;
+    return hours24 == other.hours24 && minutes == other.minutes;
   }
   bool operator<(const Time& other) {
     if (hours24 < other.hours24) {
@@ -297,8 +297,10 @@ void ToggleSkipped() {
 void MaybeResetSkipped() {
   Time& alarm = TodaysAlarm();
   Time now = Time::FromClock();
-  now.state = SKIPPED;
-  if (alarm == now && rtc.getSeconds() == 1) {
+  // rtc.getSeconds() == 1 is used to ensure that resetting skipped alarms
+  // happens only after they would have triggered, had they not been skipped.
+  // Triggering (in AlarmNow) only happens when rtc.getSeconds() == 0.
+  if (alarm == now && alarm.state == SKIPPED && rtc.getSeconds() == 1) {
     alarm.state = ACTIVE;
     EEPROM.put(0, persistent_settings);
   }
