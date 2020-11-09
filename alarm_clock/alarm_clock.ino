@@ -138,7 +138,6 @@ QwiicButton snooze_button;
 KEYPAD keypad;
 SerLCD lcd;
 FILE* lcd_file;
-FILE* serial_file;
 MP3TRIGGER mp3;
 RV1805 rtc;
 
@@ -173,14 +172,6 @@ FILE* OpenAsFile(Print& p) {
   return f;
 }
 
-bool AlarmTriggeredForTest() {
-  if (Serial.available()) {
-    Serial.read();
-    return true;
-  }
-  return false;
-}
-
 void ExtendSnooze() {
   if (snooze.state != ACTIVE) {
     snooze = Time::FromClock();
@@ -188,7 +179,6 @@ void ExtendSnooze() {
   snooze.state = ACTIVE;
   snooze.AddMinutes(kSnoozeLength);
 
-  fprintf(serial_file, "Snoozing until %2d:%02d %s\r\n", snooze.hours12(), snooze.minutes, snooze.amPMString());
 }
 
 void PrintTime() {
@@ -232,20 +222,16 @@ void TransitionStateTo(GlobalState new_state) {
     snooze.state = INACTIVE;
   }
 
-  Serial.print("Moving to state ");
   state = new_state;
 
   if (new_state == WAITING) {
-    Serial.println("WAITING");
   }
   if (new_state == SOUNDING) {
-    Serial.println("SOUNDING");
     mp3.playFile(1);
     alarm_stop = Time::FromClock();
     alarm_stop.AddMinutes(kAlarmLength);
   }
   if (new_state == SNOOZING) {
-    Serial.println("SOUNDING");
     ExtendSnooze();
   }
 }
@@ -499,38 +485,16 @@ void Run(const Item** items, const int n) {
 } // namespace menu
 
 void setup() {
-  bool setup_error = false;
   EEPROM.get(0, persistent_settings);
-  Serial.begin(9600);
   Wire.begin();
   lcd.begin(Wire);
-  if (!stop_button.begin()) {
-    Serial.println("Red Button did not acknowledge!");
-    setup_error = true;
-  }
-  if (!snooze_button.begin(0x6E)) {
-    Serial.println("Blue Button did not acknowledge!");
-    setup_error = true;
-  }
-  if (!keypad.begin()) {
-    Serial.println("Keypad did not acknowledge!");
-    // setup_error = true;  // temporarily disabled due to broken keypad
-  }
-  if (!mp3.begin()) {
-    Serial.println("MP3Trigger did not acknowledge!");
-    setup_error = true;
-  }
-  if (!rtc.begin()) {
-    Serial.println("RTC did not acknoledge!");
-    setup_error = true;
-  }
-  if (setup_error) {
-    Serial.println("Freezing");
-    while (1);
-  }
+  stop_button.begin();
+  snooze_button.begin(0x6E);
+  keypad.begin();
+  mp3.begin();
+  rtc.begin();
 
   lcd_file = OpenAsFile(lcd);
-  serial_file = OpenAsFile(Serial);
 
   stop_button.setDebounceTime(500);
   snooze_button.setDebounceTime(500);
