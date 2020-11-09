@@ -184,7 +184,7 @@ void ExtendSnooze() {
 void PrintTime() {
   Time t = Time::FromClock();
   lcd.setCursor(0, 0);
-  fprintf(lcd_file, "Now %s %2d:%02d %s",
+  fprintf_P(lcd_file, PSTR("Now %s %2d:%02d %s"),
           kDayNames[rtc.getWeekday()],
           t.hours12(),
           t.minutes,
@@ -199,11 +199,11 @@ void PrintNextAlarm() {
   lcd.setCursor(0, 1);
   const Time& t = persistent_settings.alarms[day];
   if (t.state == ACTIVE) {
-    lcd.print("Nxt ");
+    lcd.print(F("Nxt "));
   } else if (t.state == SKIPPED) {
-    lcd.print("Skp ");
+    lcd.print(F("Skp "));
   }
-  fprintf(lcd_file, "%s %2d:%02d %s",
+  fprintf_P(lcd_file, PSTR("%s %2d:%02d %s"),
           kDayNames[day],
           t.hours12(),
           t.minutes,
@@ -341,14 +341,14 @@ char ReadChar() {
 
 int InputWeekday() {
   lcd.clear();
-  lcd.println("Enter Weekday");
-  lcd.print("1=Sun -- 7=Sat");
+  lcd.println(F("Enter Weekday"));
+  lcd.print(F("1=Sun -- 7=Sat"));
   char c = ReadChar();
   if ('1' <= c && c <= '7') {
     return c - '1';
   }
   lcd.clear();
-  lcd.println("Invalid time.");
+  lcd.println(F("Invalid time."));
   delay(1000);
   return -1;
 }
@@ -356,9 +356,9 @@ int InputWeekday() {
 bool InputTime(Time& result) {
   Time t;
   lcd.clear();
-  lcd.println("Time HH:MM");
+  lcd.println(F("Time HH:MM"));
   lcd.setCursor(0, 1);
-  lcd.println("#=< (24 hours)");
+  lcd.println(F("#=< (24 hours)"));
   lcd.blink();
   lcd.setCursor(5, 0);
   char c[3];
@@ -389,7 +389,7 @@ bool InputTime(Time& result) {
 
   if (t.hours24 >= 24 || t.minutes >= 60) {
     lcd.clear();
-    lcd.println("Invalid time.");
+    lcd.println(F("Invalid time."));
     delay(1000);
     return false;
   }
@@ -408,12 +408,12 @@ void SetAlarm::Display() {
   const Time& time = persistent_settings.alarms[day_];
   lcd.clear();
 
-  fprintf(lcd_file, "%s %2d:%02d %s\r\n",
+  fprintf_P(lcd_file, PSTR("%s %2d:%02d %s\r\n"),
           kDayNames[day_], time.hours12(), time.minutes, time.amPMString());
   if (time.state == INACTIVE) {
-    lcd.print("Off ");
+    lcd.print(F("Off "));
   } else {
-    lcd.print("On  ");
+    lcd.print(F("On  "));
   }
 }
 
@@ -433,7 +433,7 @@ void SetAlarm::Handle(char c) {
 
 void SetClock::Display() {
   PrintTime();
-  lcd.print("Set Clock");
+  lcd.print(F("Set Clock"));
 }
 
 void SetClock::Handle(char c) {
@@ -447,9 +447,9 @@ void SetClock::Handle(char c) {
 
 void AllAlarms::Display() {
   if (persistent_settings.alarms_off) {
-    lcd.println("Alarm Disabled");
+    lcd.println(F("Alarm Disabled"));
   } else {
-    lcd.println("Alarm Enabled");
+    lcd.println(F("Alarm Enabled"));
   }
 }
 
