@@ -1,3 +1,4 @@
+// vim: sts=2 sw=2
 /*
   Copyright 2020 Google LLC
 
@@ -79,6 +80,7 @@ int InputWeekday();
 struct Item {
   virtual void Display() {}
   virtual void Handle(char c) {}
+  virtual void Leave() {}
 };
 
 struct SetClock : public Item {
@@ -479,10 +481,12 @@ void Run(const Item** items, const int n) {
       break;
     }
     if (c == '2' || c == '8') {
+      int old_cur = cur;
       if (c == '2') cur--;
       if (c == '8') cur++;
       if (cur < 0) cur = 0;
       if (cur >= n) cur = n - 1;
+      if (old_cur != cur) items[old_cur]->Leave();
       continue;
     }
     items[cur]->Handle(c);
