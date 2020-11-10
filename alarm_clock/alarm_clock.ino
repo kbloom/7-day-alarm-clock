@@ -134,6 +134,7 @@ constexpr int kMainLength = sizeof(main) / sizeof(Item*);
 } // namespace menu
 
 
+int operator-(const Time& t, const Time& u);
 int WriteToPrint(char c, FILE* f);
 FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
@@ -317,6 +318,16 @@ Time& Time::operator+=(int minutes) {
     this->hours24 %= 24;
   }
   return *this;
+}
+
+int operator-(const Time& t, const Time& u) {
+  int diff = (t.hours24 - u.hours24) * 60;
+  diff += (t.minutes - u.minutes);
+  if (diff < 0) {
+    // handle cases of snoozing across midnight correctly
+    diff += 24 * 60;
+  }
+  return diff;
 }
 
 uint8_t Time::hours12() {
@@ -538,6 +549,7 @@ void loop() {
   rtc.updateTime();
   MaybeResetSkipped();
   PrintTime();
+  Time now = Time::FromClock();
   if (state == WAITING) {
     PrintNextAlarm();
     if (AlarmNow()) {
@@ -554,8 +566,8 @@ void loop() {
     }
   } else if (state == SNOOZING) {
     lcd.setCursor(0, 1);
-    lcd.print(F("Snoozing"));
-    if (snooze == Time::FromClock()) {
+    fprintf_P(lcd_file, PSTR("Snoozing %2dm"), snooze-now);
+    if (snooze == now) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
@@ -573,7 +585,7 @@ void loop() {
     // Other arrangements are possible -- for a long MP3, you may not want to loop.
     // In that case you can just use mp3.isPlaying() to determine when to transition back
     // to WAITING, and ignore alarm_stop.
-    if (alarm_stop == Time::FromClock()) {
+    if (alarm_stop == now) {
       TransitionStateTo(WAITING);
     } else if (!mp3.isPlaying()) {
       mp3.playFile(1);
