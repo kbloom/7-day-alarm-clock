@@ -205,7 +205,7 @@ void PrintNextAlarm() {
   }
   lcd.setCursor(0, 1);
   const Time& t = persistent_settings.alarms[day];
-  fprintf_P(lcd_file, PSTR("%s %s"), kDayName[day], kTimeStates[t.state]);
+  fprintf_P(lcd_file, PSTR("%s: %s"), kDayName[day], kTimeStates[t.state]);
 }
 
 void TransitionStateTo(GlobalState new_state) {
@@ -495,8 +495,8 @@ void setup() {
 
   lcd_file = OpenAsFile(lcd);
 
-  stop_button.setDebounceTime(500);
-  snooze_button.setDebounceTime(500);
+  stop_button.setDebounceTime(100);
+  snooze_button.setDebounceTime(100);
   rtc.set24Hour();
   lcd.setBacklight(255, 0, 0);
   state = WAITING;
