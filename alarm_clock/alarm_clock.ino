@@ -56,7 +56,7 @@ struct Time {
   uint8_t hours12();
   const char* amPMString();
   TimeState state = INACTIVE;
-  void AddMinutes(uint8_t minutes);
+  Time& operator+=(int minutes);
   static Time FromClock();
   bool operator==(const Time& other) {
     return hours24 == other.hours24 && minutes == other.minutes;
@@ -191,7 +191,7 @@ void ExtendSnooze() {
     snooze = Time::FromClock();
   }
   snooze.state = ACTIVE;
-  snooze.AddMinutes(kSnoozeLength);
+  snooze += kSnoozeLength;
 
 }
 
@@ -235,7 +235,7 @@ void TransitionStateTo(GlobalState new_state) {
   if (new_state == SOUNDING) {
     mp3.playFile(1);
     alarm_stop = Time::FromClock();
-    alarm_stop.AddMinutes(kAlarmLength);
+    alarm_stop += kAlarmLength;
   }
   if (new_state == SNOOZING) {
     ExtendSnooze();
@@ -308,7 +308,7 @@ Time Time::FromClock() {
   return t;
 }
 
-void Time::AddMinutes(uint8_t minutes) {
+Time& Time::operator+=(int minutes) {
   this->minutes += minutes;
   if (this->minutes >= 60) {
     uint8_t hours = this->minutes / 60;
@@ -316,6 +316,7 @@ void Time::AddMinutes(uint8_t minutes) {
     this->hours24 += hours;
     this->hours24 %= 24;
   }
+  return *this;
 }
 
 uint8_t Time::hours12() {
