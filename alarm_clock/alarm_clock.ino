@@ -205,7 +205,7 @@ void PrintNextAlarm() {
   }
   lcd.setCursor(0, 1);
   const Time& t = persistent_settings.alarms[day];
-  fprintf_P(lcd_file, PSTR("%s: %s"), kDayName[day], kTimeStates[t.state]);
+  fprintf_P(lcd_file, PSTR("%s: %s"), kDayNames[day], kTimeStates[t.state]);
 }
 
 void TransitionStateTo(GlobalState new_state) {
@@ -220,6 +220,7 @@ void TransitionStateTo(GlobalState new_state) {
     snooze.state = INACTIVE;
   }
 
+  lcd.clear(); // To prevent artifacts when changing the second line of the display.
   state = new_state;
 
   if (new_state == WAITING) {
@@ -276,6 +277,7 @@ void ToggleSkipped() {
   if (t.state == ACTIVE) t.state = SKIP_NEXT;
   else if (t.state == SKIP_NEXT) t.state = ACTIVE;
   EEPROM.put(0, persistent_settings);
+  lcd.clear(); // To prevent artifacts when redrawing the second line of the display
 }
 
 void MaybeResetSkipped() {
@@ -287,6 +289,7 @@ void MaybeResetSkipped() {
   if (alarm == now && alarm.state == SKIP_NEXT && rtc.getSeconds() == 59) {
     alarm.state = ACTIVE;
     EEPROM.put(0, persistent_settings);
+    lcd.clear(); // To prevent artifacts when redrawing the second line of the display
   }
 }
 
@@ -422,7 +425,7 @@ void SetAlarm::Handle(char c) {
       alarm.state = kMaxTimeState - 1;
     }
   }
-  if(c == '6') {
+  if (c == '6') {
     alarm.state = alarm.state + 1;
     if (alarm.state >= kMaxTimeState) {
       alarm.state = 0;
@@ -507,8 +510,8 @@ void loop() {
   rtc.updateTime();
   MaybeResetSkipped();
   PrintTime();
-  PrintNextAlarm();
   if (state == WAITING) {
+    PrintNextAlarm();
     if (AlarmNow()) {
       TransitionStateTo(SOUNDING);
     } else if (keypad.getButton() != 0) {
@@ -522,6 +525,8 @@ void loop() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SNOOZING) {
+    lcd.setCursor(0, 1);
+    lcd.print(F("Snoozing"));
     if (snooze == Time::FromClock()) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
@@ -532,6 +537,8 @@ void loop() {
       ExtendSnooze();
     }
   } else if (state == SOUNDING) {
+    lcd.setCursor(0, 1);
+    lcd.print(F("Wake up!"));
     // I have a short MP3 that I want to repeat for a few minutes if
     // I'm not around to stop the alarm, so we use an explicit alarm_stop timer,
     // and if the MP3 trigger is found to not be playing, it restarts the alarm.
