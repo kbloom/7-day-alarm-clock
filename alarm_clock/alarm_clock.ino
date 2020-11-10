@@ -35,12 +35,14 @@ enum GlobalState {
   WAITING,
   SNOOZING,
   SOUNDING,
+  SOUNDING_SHABBAT,
 };
 
 enum TimeState {
   INACTIVE,
   ACTIVE,
   SKIP_NEXT,
+  SHABBAT,
   kMaxTimeState,
 };
 
@@ -48,6 +50,7 @@ const char* const kTimeStates[] = {
   "Inactive",
   "Active",
   "Skip Next",
+  "Shabbat",
 };
 
 struct Time {
@@ -168,6 +171,7 @@ const char* kDayNames[] = {
 };
 
 constexpr int kAlarmLength = 5;
+constexpr int kShabbatAlarmLength = 1;
 constexpr int kSnoozeLength = 8;
 
 GlobalState state;
@@ -220,7 +224,7 @@ void TransitionStateTo(GlobalState new_state) {
   if (new_state == state) {
     return;
   }
-  if (state == SOUNDING) {
+  if (state == SOUNDING || state == SOUNDING_SHABBAT) {
     mp3.stop();
     alarm_stop.state = INACTIVE;
   }
@@ -237,6 +241,11 @@ void TransitionStateTo(GlobalState new_state) {
     mp3.playFile(1);
     alarm_stop = Time::FromClock();
     alarm_stop += kAlarmLength;
+  }
+  if (new_state == SOUNDING_SHABBAT) {
+    mp3.playFile(1);
+    alarm_stop = Time::FromClock();
+    alarm_stop += kShabbatAlarmLength;
   }
   if (new_state == SNOOZING) {
     ExtendSnooze();
@@ -265,7 +274,7 @@ Time& TodaysAlarm() {
 bool AlarmNow() {
   const Time& alarm = TodaysAlarm();
   return !persistent_settings.alarms_off &&
-         alarm.state == ACTIVE &&
+         (alarm.state == ACTIVE || alarm.state == SHABBAT) &&
          alarm == Time::FromClock() &&
          rtc.getSeconds() == 0;
   // If the user stops the alarm within 1
@@ -552,8 +561,11 @@ void loop() {
   Time now = Time::FromClock();
   if (state == WAITING) {
     PrintNextAlarm();
-    if (AlarmNow()) {
+    bool alarm_now = AlarmNow();
+    if (alarm_now && TodaysAlarm().state == ACTIVE) {
       TransitionStateTo(SOUNDING);
+    } else if (alarm_now && TodaysAlarm().state == SHABBAT) {
+      TransitionStateTo(SOUNDING_SHABBAT);
     } else if (keypad.getButton() != 0) {
       menu::Run(menu::main, menu::kMainLength);
       EEPROM.put(0, persistent_settings);
@@ -597,6 +609,16 @@ void loop() {
       snooze_button.clearEventBits();
       TransitionStateTo(SNOOZING);
     }
+  } else if (state == SOUNDING_SHABBAT) {
+    lcd.setCursor(0, 1);
+    lcd.print(F("Shabbat Shalom!"));
+    if (alarm_stop == Time::FromClock()) {
+      TransitionStateTo(WAITING);
+    } else if (!mp3.isPlaying()) {
+      mp3.playFile(1);
+    }
+    // Don't respond to buttons in this mode.
   }
+
   delay(50);
 }
