@@ -108,6 +108,12 @@ struct SetAlarm : public Item {
     int day_;
 };
 
+struct SetVolume : public Item {
+  void Display() override;
+  void Handle(char c) override;
+  void Leave() override;
+};
+
 void Run(const Item** items, int n);
 
 const Item* main[] = {
@@ -120,6 +126,7 @@ const Item* main[] = {
   new SetAlarm(4),
   new SetAlarm(5),
   new SetAlarm(6),
+  new SetVolume,
 };
 
 constexpr int kMainLength = sizeof(main) / sizeof(Item*);
@@ -461,6 +468,25 @@ void AllAlarms::Handle(char c) {
   }
 }
 
+void SetVolume::Display() {
+  fprintf_P(lcd_file, PSTR("Volume: %d"), mp3.getVolume());
+}
+
+void SetVolume::Handle(const char c) {
+  if (!mp3.isPlaying()) mp3.playFile(1);
+  if (c == '4') {
+    mp3.setVolume(mp3.getVolume() - 1);
+  }
+  if (c == '6') {
+    mp3.setVolume(mp3.getVolume() + 1);
+  }
+}
+
+void SetVolume::Leave() {
+  mp3.stop();
+}
+
+
 void Run(const Item** items, const int n) {
   int cur = 0;
   while (true) {
@@ -468,6 +494,7 @@ void Run(const Item** items, const int n) {
     items[cur]->Display();
     const char c = ReadChar();
     if (c == '#' || c == '*') {
+      items[cur]->Leave();
       break;
     }
     if (c == '2' || c == '8' || c == '0') {
