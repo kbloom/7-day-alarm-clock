@@ -1,4 +1,4 @@
-// vim: sts=2 sw=2
+// vim: sts=2 sw=2 fdm=syntax
 /*
   Copyright 2020 Google LLC
 
@@ -40,7 +40,14 @@ enum GlobalState {
 enum TimeState {
   INACTIVE,
   ACTIVE,
-  SKIPPED,
+  SKIP_NEXT,
+  kMaxTimeState,
+};
+
+const char* const kTimeStates[] = {
+  "Inactive",
+  "Active",
+  "Skip Next",
 };
 
 struct Time {
@@ -198,16 +205,7 @@ void PrintNextAlarm() {
   }
   lcd.setCursor(0, 1);
   const Time& t = persistent_settings.alarms[day];
-  if (t.state == ACTIVE) {
-    lcd.print(F("Nxt "));
-  } else if (t.state == SKIPPED) {
-    lcd.print(F("Skp "));
-  }
-  fprintf_P(lcd_file, PSTR("%s %2d:%02d %s"),
-            kDayNames[day],
-            t.hours12(),
-            t.minutes,
-            t.amPMString());
+  fprintf_P(lcd_file, PSTR("%s %s"), kDayName[day], kTimeStates[t.state]);
 }
 
 void TransitionStateTo(GlobalState new_state) {
@@ -275,18 +273,18 @@ void ToggleSkipped() {
   int day = NextAlarmDay();
   if (day == -1) return;
   Time& t = persistent_settings.alarms[day];
-  if (t.state == ACTIVE) t.state = SKIPPED;
-  else if (t.state == SKIPPED) t.state = ACTIVE;
+  if (t.state == ACTIVE) t.state = SKIP_NEXT;
+  else if (t.state == SKIP_NEXT) t.state = ACTIVE;
   EEPROM.put(0, persistent_settings);
 }
 
 void MaybeResetSkipped() {
   Time& alarm = TodaysAlarm();
   Time now = Time::FromClock();
-  // rtc.getSeconds() == 1 is used to ensure that resetting skipped alarms
+  // rtc.getSeconds() == 59 is used to ensure that resetting skipped alarms
   // happens only after they would have triggered, had they not been skipped.
   // Triggering (in AlarmNow) only happens when rtc.getSeconds() == 0.
-  if (alarm == now && alarm.state == SKIPPED && rtc.getSeconds() == 1) {
+  if (alarm == now && alarm.state == SKIP_NEXT && rtc.getSeconds() == 59) {
     alarm.state = ACTIVE;
     EEPROM.put(0, persistent_settings);
   }
@@ -410,11 +408,7 @@ void SetAlarm::Display() {
 
   fprintf_P(lcd_file, PSTR("%s %2d:%02d %s\r\n"),
             kDayNames[day_], time.hours12(), time.minutes, time.amPMString());
-  if (time.state == INACTIVE) {
-    lcd.print(F("Off "));
-  } else {
-    lcd.print(F("On  "));
-  }
+  lcd.print(kTimeStates[time.state]);
 }
 
 void SetAlarm::Handle(char c) {
@@ -422,11 +416,16 @@ void SetAlarm::Handle(char c) {
   if (c == '5') {
     InputTime(alarm);
   }
-  if (c == '4' || c == '6') {
-    if (alarm.state == INACTIVE) {
-      alarm.state = ACTIVE;
-    } else {
-      alarm.state = INACTIVE;
+  if (c == '4') {
+    alarm.state = alarm.state - 1;
+    if (alarm.state < 0 || alarm.state >= kMaxTimeState) {
+      alarm.state = kMaxTimeState - 1;
+    }
+  }
+  if(c == '6') {
+    alarm.state = alarm.state + 1;
+    if (alarm.state >= kMaxTimeState) {
+      alarm.state = 0;
     }
   }
 }
