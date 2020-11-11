@@ -17,7 +17,7 @@ It uses the following components:
  * Qwiic cables
  * a [wall wart TOL-15314](https://www.sparkfun.com/products/15314)
  * a micro-SD card
- * some sort fo enclosure for the final product
+ * some sort of enclosure for the final product
 
 The idea behind this project is that we can set the time and alarm using the keypad and a menu system.
 
@@ -32,9 +32,20 @@ The alarm has 3 states:
  * Sounding
    * Hitting the snooze button will stop the alarm and start snoozing for 8 minutes.
    * Hitting hte stop button will stop the alarm  and transition to the waiting state for the next day's alarm.
+ * The alarm also supports a shabbat mode alarm, which sounds for one minute, cannot be skipped if you wake up early, and all buttons are disabled while it is sounding.
 
-There are several sketches here currently. The first two will merge at some point to create the final product.
+Menu navigation:
 
- * `menu_system`, where I develop the set menu system without worrying about alarm clock logic
- * `alarm_clock`, where I develop the alarm clock state machine. 
- * `serlcd_charset`, a demo to get me acquainted with the SerLCD display by showing me which characters it can display.
+The menu navigtaion is as follows:
+
+ * Press any key on the keypad to activate the alarm.
+ * Press '2' to move up the menu, and '8' or '0' to move down the menu.
+ * Press '5' to select a menu item whose action is to select (primarily setting times.)
+ * Press '4' or '6' to cycle through options
+   * All alarms enabled/disabled
+   * Individual alarm on/off/shabbat
+   * Volume control
+ * Press '\*' or '#' to exit any menu or input prompt.
+
+# serlcd_charset
+`serlcd_charset`, is a demo to get me acquainted with the SerLCD display by showing me which characters it can display.
