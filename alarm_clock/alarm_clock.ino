@@ -509,6 +509,7 @@ void SetVolume::Leave() {
 
 
 void Run(const Item** items, const int n) {
+  lcd.setFastBacklight(0,0,255);
   int cur = 0;
   while (true) {
     lcd.clear();
@@ -530,6 +531,7 @@ void Run(const Item** items, const int n) {
     items[cur]->Handle(c);
   }
   lcd.clear();
+  lcd.setFastBacklight(255,0,0);
 }
 
 } // namespace menu
