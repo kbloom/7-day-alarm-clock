@@ -27,3 +27,9 @@ information on using pull requests.
 
 This project follows
 [Google's Open Source Community Guidelines](https://opensource.google/conduct/).
+
+# Disclaimer:
+
+This is a personal project of Ken Bloom. It is not an official Google product
+(experimental or otherwise), it is just code that happens to be owned by
+Google, by virtue of the author's employment as a software engineer at Google.
