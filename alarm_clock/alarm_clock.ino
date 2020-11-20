@@ -452,7 +452,6 @@ bool InputTime(Time& result) {
 
   t.minutes = atoi(c);
   lcd.noBlink();
-  t.state = ACTIVE;
 
   if (t.hours24 >= 24 || t.minutes >= 60) {
     lcd.clear();
@@ -483,7 +482,9 @@ void SetAlarm::Display() {
 void SetAlarm::Handle(char c) {
   Time& alarm = persistent_settings.alarms[day_];
   if (c == '5') {
-    InputTime(alarm);
+    if (!InputTime(alarm) && alarm.state != SHABBAT) {
+      alarm.state = ACTIVE;
+    }
   }
   if (c == '4') {
     alarm.state = alarm.state - 1;
