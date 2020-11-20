@@ -21,6 +21,7 @@
 #include <SparkFun_Qwiic_Keypad_Arduino_Library.h>
 #include <SerLCD.h>
 #include <stdio.h>
+#include "double_high_font.h"
 
 /* I2C addresses:
     0x37: MP3
@@ -154,10 +155,13 @@ void MaybeResetSkipped();
 QwiicButton stop_button;
 QwiicButton snooze_button;
 KEYPAD keypad;
-SerLCD lcd;
-FILE* lcd_file;
 MP3TRIGGER mp3;
 RV1805 rtc;
+
+SerLCD lcd;
+DoubleHighFont<SerLCD> lcd_tall(lcd);
+FILE* lcd_file;
+FILE* lcd_tall_file;
 
 // Weekdays are numbered 0-6 on the RV1805
 const char* kDayNames[] = {
@@ -546,7 +550,9 @@ void setup() {
   mp3.begin();
   rtc.begin();
 
+  lcd_tall.Install();
   lcd_file = OpenAsFile(lcd);
+  lcd_tall_file = OpenAsFile(lcd_tall);
 
   stop_button.setDebounceTime(100);
   snooze_button.setDebounceTime(100);

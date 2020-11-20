@@ -17,6 +17,7 @@
 #pragma once
 
 #include <avr/pgmspace.h>
+#include <Print.h>
 
 const uint8_t kCustomChars[8][8] PROGMEM = {
    {
@@ -118,26 +119,42 @@ constexpr int kTop = 0;
 constexpr int kBottom = 1;
 
 template <class LCD>
-void InstallFont(LCD& lcd) {
-   for (int i = 0; i < 8; i++) {
-      uint8_t buf[8];
-      memcpy_P(buf, kCustomChars[i], 8);
-      lcd.createChar(i, buf);
-   }
-}
+class DoubleHighFont : public Print {
+  private:
+    LCD& lcd_;
+    uint8_t column_;
 
-template <class LCD>
-void WriteDigit(LCD& lcd, uint8_t col, uint8_t digit) {
-   lcd.setCursor(col, 0);
-   lcd.writeChar(kDigitParts[digit][kTop]);
-   lcd.setCursor(col, 1);
-   lcd.writeChar(kDigitParts[digit][kBottom]);
-}
+  public:
+    DoubleHighFont(LCD& lcd): lcd_(lcd){}
 
-template <class LCD>
-void WriteColon(LCD& lcd, uint8_t col) {
-   lcd.setCursor(col, 0);
-   lcd.write(0b10100101);
-   lcd.setCursor(col, 1);
-   lcd.write(0b10100101);
-}
+    void Install() {
+       for (int i = 0; i < 8; i++) {
+	  uint8_t buf[8];
+	  memcpy_P(buf, kCustomChars[i], 8);
+	  lcd_.createChar(i, buf);
+       }
+    }
+
+    void SetColumn(uint8_t col) {
+      column_ = col;
+    }
+
+    size_t write(uint8_t c) override {
+      if ('0' <= c && c <= '9') {
+	lcd_.setCursor(column_, 0);
+	lcd_.writeChar(kDigitParts[c-'0'][kTop]);
+	lcd_.setCursor(column_, 1);
+	lcd_.writeChar(kDigitParts[c-'0'][kBottom]);
+	column_++;
+	return 1;
+      } else if (c == ':') {
+	lcd_.setCursor(column_, 0);
+	lcd_.write(0b10100101);
+	lcd_.setCursor(column_, 1);
+	lcd_.write(0b10100101);
+	column_++;
+	return 1;
+      }
+      return 0;
+    }
+};
