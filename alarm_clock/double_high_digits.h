@@ -118,6 +118,8 @@ const uint8_t kDigitParts[10][2] = {
 constexpr int kTop = 0;
 constexpr int kBottom = 1;
 
+// Templated so that it works with both SerLCD and LiquidCrystal
+// (and any other class that implements the same interface)
 template <class LCD>
 class DoubleHighDigits : public Print {
   private:
@@ -150,6 +152,8 @@ class DoubleHighDigits : public Print {
       }
       if (c == ':') {
         lcd_.setCursor(column_, 0);
+        // Why did I identify this character in binary?
+        // That's the way it's printed on the HD44780 data sheet.
         lcd_.write(0b10100101);
         lcd_.setCursor(column_, 1);
         lcd_.write(0b10100101);
