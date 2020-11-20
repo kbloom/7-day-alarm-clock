@@ -421,7 +421,6 @@ int InputWeekday() {
 }
 
 bool InputTime(Time& result) {
-  Time t;
   lcd.clear();
   lcd.println(F("Time HH:MM"));
   lcd.setCursor(0, 1);
@@ -440,7 +439,7 @@ bool InputTime(Time& result) {
   lcd.print(c[1]);
   lcd.print(':');
 
-  t.hours24 = atoi(c);
+  uint8_t hours24 = atoi(c);
 
   c[0] = ReadChar();
   if (c[0] == '#' || c[0] == '*') goto user_exit;
@@ -450,17 +449,18 @@ bool InputTime(Time& result) {
   if (c[1] == '#' || c[1] == '*') goto user_exit;
   lcd.print(c[1]);
 
-  t.minutes = atoi(c);
+  uint8_t minutes = atoi(c);
   lcd.noBlink();
 
-  if (t.hours24 >= 24 || t.minutes >= 60) {
+  if (hours24 >= 24 || minutes >= 60) {
     lcd.clear();
     lcd.println(F("Invalid time."));
     delay(1000);
     return false;
   }
 
-  result = t;
+  result.hours24 = hours24;
+  result.minutes = minutes;
   return true;
 
 user_exit:
