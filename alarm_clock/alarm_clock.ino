@@ -144,7 +144,9 @@ FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTime();
+void PrintTimeTall();
 void PrintNextAlarm();
+void ClearStatusArea();
 void TransitionStateTo(GlobalState new_state);
 Time& TodaysAlarm();
 bool AlarmNow();
@@ -214,14 +216,46 @@ void PrintTime() {
             t.amPMString());
 }
 
+void PrintTimeTall() {
+  Time t = Time::FromClock();
+  lcd_tall.SetColumn(0);
+  fprintf_P(lcd_tall_file, PSTR("%2d:%02d"), t.hours12(), t.minutes);
+  lcd.setCursor(6,0);
+  lcd.print(kDayNames[rtc.getWeekday()]);
+  lcd.setCursor(6,1);
+  lcd.print(t.amPMString());
+}
+
 void PrintNextAlarm() {
   int day = NextAlarmDay();
   if (day == -1) {
     return;
   }
-  lcd.setCursor(0, 1);
+  lcd.setCursor(13, 0);
+  lcd.print(kDayNames[day]);
+  lcd.setCursor(12, 1);
   const Time& t = persistent_settings.alarms[day];
-  fprintf_P(lcd_file, PSTR("%s: %s"), kDayNames[day], kTimeStates[t.state]);
+  switch(t.state) {
+  case INACTIVE:
+    lcd.print(F(" Off"));
+    break;
+  case ACTIVE:
+    lcd.print(F("  On"));
+    break;
+  case SKIP_NEXT:
+    lcd.print(F("Skip"));
+    break;
+  case SHABBAT:
+    lcd.print(F("Shbt"));
+    break;
+  }
+}
+
+void ClearStatusArea() {
+  lcd.setCursor(13,0);
+  lcd.print(F("   "));
+  lcd.setCursor(12,0);
+  lcd.print(F("    "));
 }
 
 void TransitionStateTo(GlobalState new_state) {
@@ -557,7 +591,7 @@ void setup() {
   stop_button.setDebounceTime(100);
   snooze_button.setDebounceTime(100);
   rtc.set24Hour();
-  lcd.setBacklight(255, 0, 0);
+  lcd.setFastBacklight(255, 0, 0);
   state = WAITING;
 }
 
@@ -565,7 +599,7 @@ void loop() {
   keypad.updateFIFO();
   rtc.updateTime();
   MaybeResetSkipped();
-  PrintTime();
+  PrintTimeTall();
   Time now = Time::FromClock();
   if (state == WAITING) {
     PrintNextAlarm();
@@ -585,8 +619,10 @@ void loop() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SNOOZING) {
-    lcd.setCursor(0, 1);
-    fprintf_P(lcd_file, PSTR("Snoozing %2dm"), snooze-now);
+    lcd.setCursor(13, 0);
+    lcd.print(F("Snz"));
+    lcd.setCursor(12, 1);
+    fprintf_P(lcd_file, PSTR("%3dm"), snooze-now);
     if (snooze == now) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
@@ -597,8 +633,7 @@ void loop() {
       ExtendSnooze();
     }
   } else if (state == SOUNDING) {
-    lcd.setCursor(0, 1);
-    lcd.print(F("Wake up!"));
+    ClearStatusArea();
     // I have a short MP3 that I want to repeat for a few minutes if
     // I'm not around to stop the alarm, so we use an explicit alarm_stop timer,
     // and if the MP3 trigger is found to not be playing, it restarts the alarm.
@@ -618,8 +653,7 @@ void loop() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SOUNDING_SHABBAT) {
-    lcd.setCursor(0, 1);
-    lcd.print(F("Shabbat Shalom!"));
+    ClearStatusArea();
     if (alarm_stop == Time::FromClock()) {
       TransitionStateTo(WAITING);
     } else if (!mp3.isPlaying()) {
