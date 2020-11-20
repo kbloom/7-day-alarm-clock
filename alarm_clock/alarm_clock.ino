@@ -222,6 +222,7 @@ void PrintTimeTall() {
 void PrintNextAlarm() {
   int day = NextAlarmDay();
   if (day == -1) {
+    ClearStatusArea();
     return;
   }
   lcd.setCursor(13, 0);
