@@ -20,101 +20,101 @@
 #include <Print.h>
 
 const uint8_t kCustomChars[8][8] PROGMEM = {
-   {
-      0b11111,
-      0b11111,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b11111,
-      0b11111,
-   },
-   {
-      0b11111,
-      0b11111,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-   },
-   {
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b10001,
-      0b11111,
-      0b11111,
-   },
-   {
-      0b11111,
-      0b11111,
-      0b10000,
-      0b10000,
-      0b10000,
-      0b10000,
-      0b11111,
-      0b11111,
-   },
-   {
-      0b11111,
-      0b11111,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b11111,
-      0b11111,
-   },
-   {
-      0b11111,
-      0b11111,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-   },
-   {
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b01111,
-      0b11111,
-   },
-   {
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-      0b00001,
-   },
+  {
+    0b11111,
+    0b11111,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b11111,
+    0b11111,
+  },
+  {
+    0b11111,
+    0b11111,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+  },
+  {
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b11111,
+    0b11111,
+  },
+  {
+    0b11111,
+    0b11111,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b10000,
+    0b11111,
+    0b11111,
+  },
+  {
+    0b11111,
+    0b11111,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b11111,
+    0b11111,
+  },
+  {
+    0b11111,
+    0b11111,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+  },
+  {
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b01111,
+    0b11111,
+  },
+  {
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+    0b00001,
+  },
 };
 
 const uint8_t kDigitParts[10][2] = {
-   {1,2},
-   {7,7},
-   {5,3},
-   {5,4},
-   {2,7},
-   {3,6},
-   {3,2},
-   {5,7},
-   {1,0},
-   {1,4},
+  {1, 2},
+  {7, 7},
+  {5, 3},
+  {5, 4},
+  {2, 7},
+  {3, 6},
+  {3, 2},
+  {5, 7},
+  {1, 0},
+  {1, 4},
 };
-   
+
 constexpr int kTop = 0;
 constexpr int kBottom = 1;
 
@@ -125,14 +125,14 @@ class DoubleHighFont : public Print {
     uint8_t column_;
 
   public:
-    DoubleHighFont(LCD& lcd): lcd_(lcd){}
+    DoubleHighFont(LCD& lcd): lcd_(lcd) {}
 
     void Install() {
-       for (int i = 0; i < 8; i++) {
-	  uint8_t buf[8];
-	  memcpy_P(buf, kCustomChars[i], 8);
-	  lcd_.createChar(i, buf);
-       }
+      for (int i = 0; i < 8; i++) {
+        uint8_t buf[8];
+        memcpy_P(buf, kCustomChars[i], 8);
+        lcd_.createChar(i, buf);
+      }
     }
 
     void SetColumn(uint8_t col) {
@@ -141,19 +141,28 @@ class DoubleHighFont : public Print {
 
     size_t write(uint8_t c) override {
       if ('0' <= c && c <= '9') {
-	lcd_.setCursor(column_, 0);
-	lcd_.writeChar(kDigitParts[c-'0'][kTop]);
-	lcd_.setCursor(column_, 1);
-	lcd_.writeChar(kDigitParts[c-'0'][kBottom]);
-	column_++;
-	return 1;
-      } else if (c == ':') {
-	lcd_.setCursor(column_, 0);
-	lcd_.write(0b10100101);
-	lcd_.setCursor(column_, 1);
-	lcd_.write(0b10100101);
-	column_++;
-	return 1;
+        lcd_.setCursor(column_, 0);
+        lcd_.writeChar(kDigitParts[c - '0'][kTop]);
+        lcd_.setCursor(column_, 1);
+        lcd_.writeChar(kDigitParts[c - '0'][kBottom]);
+        column_++;
+        return 1;
+      }
+      if (c == ':') {
+        lcd_.setCursor(column_, 0);
+        lcd_.write(0b10100101);
+        lcd_.setCursor(column_, 1);
+        lcd_.write(0b10100101);
+        column_++;
+        return 1;
+      }
+      if (c == ' ') {
+        lcd_.setCursor(column_, 0);
+        lcd_.write(' ');
+        lcd_.setCursor(column_, 1);
+        lcd_.write(' ');
+        column_++;
+        return 1;
       }
       return 0;
     }
