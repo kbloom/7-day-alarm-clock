@@ -134,3 +134,10 @@ void WriteDigit(LCD& lcd, uint8_t col, uint8_t digit) {
    lcd.writeChar(kDigitParts[digit][kBottom]);
 }
 
+template <class LCD>
+void WriteColon(LCD& lcd, uint8_t col) {
+   lcd.setCursor(col, 0);
+   lcd.write(0b10100101);
+   lcd.setCursor(col, 1);
+   lcd.write(0b10100101);
+}

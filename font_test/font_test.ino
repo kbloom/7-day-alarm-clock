@@ -29,7 +29,7 @@ void setup() {
   for (int i=0; i < 10; i++) {
     WriteDigit(lcd, i, i);
   }
-
+  WriteColon(lcd, 10);
 }
 
 void loop() {
