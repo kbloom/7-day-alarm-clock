@@ -102,7 +102,12 @@ const uint8_t kCustomChars[8][8] PROGMEM = {
   },
 };
 
-const uint8_t kDigitParts[10][2] = {
+struct CharParts {
+  uint8_t top;
+  uint8_t bottom;
+};
+
+const CharParts kDigitParts[10] = {
   {1, 2},
   {7, 7},
   {5, 3},
@@ -114,9 +119,6 @@ const uint8_t kDigitParts[10][2] = {
   {1, 0},
   {1, 4},
 };
-
-constexpr int kTop = 0;
-constexpr int kBottom = 1;
 
 // Templated so that it works with both SerLCD and LiquidCrystal
 // (and any other class that implements the same interface)
@@ -144,9 +146,9 @@ class DoubleHighDigits : public Print {
     size_t write(uint8_t c) override {
       if ('0' <= c && c <= '9') {
         lcd_.setCursor(column_, 0);
-        lcd_.writeChar(kDigitParts[c - '0'][kTop]);
+        lcd_.writeChar(kDigitParts[c - '0'].top);
         lcd_.setCursor(column_, 1);
-        lcd_.writeChar(kDigitParts[c - '0'][kBottom]);
+        lcd_.writeChar(kDigitParts[c - '0'].bottom);
         column_++;
         return 1;
       }
