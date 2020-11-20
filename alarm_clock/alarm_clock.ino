@@ -47,13 +47,6 @@ enum TimeState {
   kMaxTimeState,
 };
 
-const char* const kTimeStates[] = {
-  "Inactive",
-  "Active",
-  "Skip Next",
-  "Shabbat",
-};
-
 struct Time {
   uint8_t hours24;
   uint8_t minutes;
@@ -220,9 +213,9 @@ void PrintTimeTall() {
   Time t = Time::FromClock();
   lcd_tall.SetColumn(0);
   fprintf_P(lcd_tall_file, PSTR("%2d:%02d"), t.hours12(), t.minutes);
-  lcd.setCursor(6,0);
+  lcd.setCursor(6, 0);
   lcd.print(kDayNames[rtc.getWeekday()]);
-  lcd.setCursor(6,1);
+  lcd.setCursor(6, 1);
   lcd.print(t.amPMString());
 }
 
@@ -235,26 +228,26 @@ void PrintNextAlarm() {
   lcd.print(kDayNames[day]);
   lcd.setCursor(12, 1);
   const Time& t = persistent_settings.alarms[day];
-  switch(t.state) {
-  case INACTIVE:
-    lcd.print(F(" Off"));
-    break;
-  case ACTIVE:
-    lcd.print(F("  On"));
-    break;
-  case SKIP_NEXT:
-    lcd.print(F("Skip"));
-    break;
-  case SHABBAT:
-    lcd.print(F("Shbt"));
-    break;
+  switch (t.state) {
+    case INACTIVE:
+      lcd.print(F(" Off"));
+      break;
+    case ACTIVE:
+      lcd.print(F("  On"));
+      break;
+    case SKIP_NEXT:
+      lcd.print(F("Skip"));
+      break;
+    case SHABBAT:
+      lcd.print(F("Shbt"));
+      break;
   }
 }
 
 void ClearStatusArea() {
-  lcd.setCursor(13,0);
+  lcd.setCursor(13, 0);
   lcd.print(F("   "));
-  lcd.setCursor(12,0);
+  lcd.setCursor(12, 0);
   lcd.print(F("    "));
 }
 
@@ -476,7 +469,20 @@ void SetAlarm::Display() {
 
   fprintf_P(lcd_file, PSTR("%s %2d:%02d %s\r\n"),
             kDayNames[day_], time.hours12(), time.minutes, time.amPMString());
-  lcd.print(kTimeStates[time.state]);
+  switch (time.state) {
+    case INACTIVE:
+      lcd.print(F("Inactive"));
+      break;
+    case ACTIVE:
+      lcd.print(F("Active"));
+      break;
+    case SKIP_NEXT:
+      lcd.print(F("Skip Next"));
+      break;
+    case SHABBAT:
+      lcd.print(F("Shabbat"));
+      break;
+  }
 }
 
 void SetAlarm::Handle(char c) {
@@ -548,7 +554,7 @@ void SetVolume::Leave() {
 
 
 void Run(const Item** items, const int n) {
-  lcd.setFastBacklight(0,0,255);
+  lcd.setFastBacklight(0, 0, 255);
   int cur = 0;
   while (true) {
     lcd.clear();
@@ -570,7 +576,7 @@ void Run(const Item** items, const int n) {
     items[cur]->Handle(c);
   }
   lcd.clear();
-  lcd.setFastBacklight(255,0,0);
+  lcd.setFastBacklight(255, 0, 0);
 }
 
 } // namespace menu
@@ -623,7 +629,7 @@ void loop() {
     lcd.setCursor(13, 0);
     lcd.print(F("Snz"));
     lcd.setCursor(12, 1);
-    fprintf_P(lcd_file, PSTR("%3dm"), snooze-now);
+    fprintf_P(lcd_file, PSTR("%3dm"), snooze - now);
     if (snooze == now) {
       TransitionStateTo(SOUNDING);
     } else if (stop_button.hasBeenClicked()) {
