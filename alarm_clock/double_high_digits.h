@@ -119,13 +119,13 @@ constexpr int kTop = 0;
 constexpr int kBottom = 1;
 
 template <class LCD>
-class DoubleHighFont : public Print {
+class DoubleHighDigits : public Print {
   private:
     LCD& lcd_;
     uint8_t column_;
 
   public:
-    DoubleHighFont(LCD& lcd): lcd_(lcd) {}
+    DoubleHighDigits(LCD& lcd): lcd_(lcd) {}
 
     void Install() {
       for (int i = 0; i < 8; i++) {

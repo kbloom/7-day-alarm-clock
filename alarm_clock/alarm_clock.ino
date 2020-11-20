@@ -21,7 +21,7 @@
 #include <SparkFun_Qwiic_Keypad_Arduino_Library.h>
 #include <SerLCD.h>
 #include <stdio.h>
-#include "double_high_font.h"
+#include "double_high_digits.h"
 
 /* I2C addresses:
     0x37: MP3
@@ -161,7 +161,7 @@ MP3TRIGGER mp3;
 RV1805 rtc;
 
 SerLCD lcd;
-DoubleHighFont<SerLCD> lcd_tall(lcd);
+DoubleHighDigits<SerLCD> lcd_tall(lcd);
 FILE* lcd_file;
 FILE* lcd_tall_file;
 
