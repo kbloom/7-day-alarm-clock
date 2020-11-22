@@ -256,6 +256,10 @@ void TransitionStateTo(GlobalState new_state) {
   if (new_state == state) {
     return;
   }
+  if (state == SOUNDING_SHABBAT) {
+      snooze_button.clearEventBits();
+      stop_button.clearEventBits();
+  }
   if (state == SOUNDING || state == SOUNDING_SHABBAT) {
     mp3.stop();
     alarm_stop.state = INACTIVE;
