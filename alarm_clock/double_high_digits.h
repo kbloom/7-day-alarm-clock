@@ -107,7 +107,7 @@ struct CharParts {
   uint8_t bottom;
 };
 
-const CharParts kDigitParts[10] = {
+const CharParts kDigitParts[10] PROGMEM = {
   {1, 2},
   {7, 7},
   {5, 3},
@@ -146,9 +146,9 @@ class DoubleHighDigits : public Print {
     size_t write(uint8_t c) override {
       if ('0' <= c && c <= '9') {
         lcd_.setCursor(column_, 0);
-        lcd_.writeChar(kDigitParts[c - '0'].top);
+        lcd_.writeChar(pgm_read_byte(&kDigitParts[c - '0'].top));
         lcd_.setCursor(column_, 1);
-        lcd_.writeChar(kDigitParts[c - '0'].bottom);
+        lcd_.writeChar(pgm_read_byte(&kDigitParts[c - '0'].bottom));
         column_++;
         return 1;
       }
