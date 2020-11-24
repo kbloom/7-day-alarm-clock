@@ -21,17 +21,17 @@
 
 const uint8_t kCustomChars[8][8] PROGMEM = {
   {
-    0b11111,
+    0b01110,
     0b11111,
     0b10001,
     0b10001,
     0b10001,
     0b10001,
     0b11111,
-    0b11111,
+    0b01110,
   },
   {
-    0b11111,
+    0b01110,
     0b11111,
     0b10001,
     0b10001,
@@ -48,11 +48,11 @@ const uint8_t kCustomChars[8][8] PROGMEM = {
     0b10001,
     0b10001,
     0b11111,
-    0b11111,
+    0b01110,
   },
   {
-    0b11111,
-    0b11111,
+    0b01111,
+    0b11110,
     0b10000,
     0b10000,
     0b10000,
@@ -61,7 +61,7 @@ const uint8_t kCustomChars[8][8] PROGMEM = {
     0b11111,
   },
   {
-    0b11111,
+    0b11110,
     0b11111,
     0b00001,
     0b00001,
@@ -88,7 +88,7 @@ const uint8_t kCustomChars[8][8] PROGMEM = {
     0b00001,
     0b00001,
     0b01111,
-    0b11111,
+    0b11110,
   },
   {
     0b00001,
@@ -111,13 +111,13 @@ const CharParts kDigitParts[10] PROGMEM = {
   {1, 2},
   {7, 7},
   {5, 3},
-  {5, 4},
+  {4, 6},
   {2, 7},
   {3, 6},
   {3, 2},
   {5, 7},
-  {1, 0},
-  {1, 4},
+  {0, 2},
+  {0, 6},
 };
 
 // Templated so that it works with both SerLCD and LiquidCrystal
