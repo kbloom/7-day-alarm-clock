@@ -105,11 +105,13 @@ struct SetAlarm : public Item {
     int day_;
 };
 
-struct SetVolume : public Item {
+struct SoundSettings : public Item {
   void Display() override;
   void Handle(char c) override;
   void Leave() override;
 };
+
+
 
 void Run(const Item** items, int n);
 
@@ -123,7 +125,7 @@ const Item* main[] = {
   new SetAlarm(4),
   new SetAlarm(5),
   new SetAlarm(6),
-  new SetVolume,
+  new SoundSettings,
 };
 
 constexpr int kMainLength = sizeof(main) / sizeof(Item*);
@@ -257,8 +259,8 @@ void TransitionStateTo(GlobalState new_state) {
     return;
   }
   if (state == SOUNDING_SHABBAT) {
-      snooze_button.clearEventBits();
-      stop_button.clearEventBits();
+    snooze_button.clearEventBits();
+    stop_button.clearEventBits();
   }
   if (state == SOUNDING || state == SOUNDING_SHABBAT) {
     mp3.stop();
@@ -539,11 +541,31 @@ void AllAlarms::Handle(char c) {
   }
 }
 
-void SetVolume::Display() {
-  fprintf_P(lcd_file, PSTR("Volume: %d"), mp3.getVolume());
+void SoundSettings::Display() {
+  fprintf_P(lcd_file, PSTR("4/6 Volume: %d\r\n"), mp3.getVolume());
+  lcd.print("7/9 Eq: ");
+  byte eq = mp3.getEQ();
+  if (eq == 0) {
+    lcd.print(F("Normal"));
+  }
+  if (eq == 1) {
+    lcd.print(F("Pop"));
+  }
+  if (eq == 2) {
+    lcd.print(F("Rock"));
+  }
+  if (eq == 3) {
+    lcd.print(F("Jazz"));
+  }
+  if (eq == 4) {
+    lcd.print(F("Classic"));
+  }
+  if (eq == 5) {
+    lcd.print(F("Bass"));
+  }
 }
 
-void SetVolume::Handle(const char c) {
+void SoundSettings::Handle(const char c) {
   if (!mp3.isPlaying()) mp3.playFile(1);
   if (c == '4') {
     mp3.setVolume(mp3.getVolume() - 1);
@@ -551,9 +573,19 @@ void SetVolume::Handle(const char c) {
   if (c == '6') {
     mp3.setVolume(mp3.getVolume() + 1);
   }
+  if (c == '7') {
+    byte newEq = mp3.getEQ() - 1;
+    if (newEq < 0) newEq = 0;
+    mp3.setEQ(newEq);
+  }
+  if (c == '7') {
+    byte newEq = mp3.getEQ() + 1;
+    if (newEq > 5) newEq = 5;
+    mp3.setEQ(newEq);
+  }
 }
 
-void SetVolume::Leave() {
+void SoundSettings::Leave() {
   mp3.stop();
 }
 
