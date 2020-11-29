@@ -138,7 +138,6 @@ int WriteToPrint(char c, FILE* f);
 FILE* OpenAsFile(Print& p);
 bool AlarmTriggeredForTest();
 void ExtendSnooze();
-void PrintTime();
 void PrintTimeTall();
 void PrintNextAlarm();
 void ClearStatusArea();
@@ -199,16 +198,6 @@ void ExtendSnooze() {
   snooze.state = ACTIVE;
   snooze += kSnoozeLength;
 
-}
-
-void PrintTime() {
-  Time t = Time::FromClock();
-  lcd.setCursor(0, 0);
-  fprintf_P(lcd_file, PSTR("Now %s %2d:%02d %s"),
-            kDayNames[rtc.getWeekday()],
-            t.hours12(),
-            t.minutes,
-            t.amPMString());
 }
 
 void PrintTimeTall() {
@@ -514,8 +503,14 @@ void SetAlarm::Handle(char c) {
 }
 
 void SetClock::Display() {
-  PrintTime();
-  lcd.print(F("Set Clock"));
+  Time t = Time::FromClock();
+  lcd.setCursor(0, 0);
+  lcd.println(F("Set Clock"));
+  fprintf_P(lcd_file, PSTR(" %s %2d:%02d %s"),
+            kDayNames[rtc.getWeekday()],
+            t.hours12(),
+            t.minutes,
+            t.amPMString());
 }
 
 void SetClock::Handle(char c) {
