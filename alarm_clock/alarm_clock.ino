@@ -140,6 +140,7 @@ bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTimeTall();
 void PrintNextAlarm();
+void PrintShabbatStatus();
 void ClearStatusArea();
 void TransitionStateTo(GlobalState new_state);
 Time& TodaysAlarm();
@@ -237,6 +238,13 @@ void PrintNextAlarm() {
   }
 }
 
+void PrintShabbatStatus() {
+  lcd.setCursor(13, 0);
+  lcd.print(kDayNames[rtc.getWeekday()]);
+  lcd.setCursor(12, 1);
+  lcd.print(F("Shbt"));  
+}
+
 void ClearStatusArea() {
   lcd.setCursor(13, 0);
   lcd.print(F("   "));
@@ -260,7 +268,6 @@ void TransitionStateTo(GlobalState new_state) {
     snooze.state = INACTIVE;
   }
 
-  lcd.clear(); // To prevent artifacts when changing the second line of the display.
   state = new_state;
 
   if (new_state == WAITING) {
@@ -322,7 +329,6 @@ void ToggleSkipped() {
   if (t.state == ACTIVE) t.state = SKIP_NEXT;
   else if (t.state == SKIP_NEXT) t.state = ACTIVE;
   EEPROM.put(0, persistent_settings);
-  lcd.clear(); // To prevent artifacts when redrawing the second line of the display
 }
 
 void MaybeResetSkipped() {
@@ -334,7 +340,6 @@ void MaybeResetSkipped() {
   if (alarm == now && alarm.state == SKIP_NEXT && rtc.getSeconds() == 59) {
     alarm.state = ACTIVE;
     EEPROM.put(0, persistent_settings);
-    lcd.clear(); // To prevent artifacts when redrawing the second line of the display
   }
 }
 
@@ -692,7 +697,7 @@ void loop() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SOUNDING_SHABBAT) {
-    ClearStatusArea();
+    PrintShabbatStatus();
     if (alarm_stop == Time::FromClock()) {
       TransitionStateTo(WAITING);
     } else if (!mp3.isPlaying()) {
