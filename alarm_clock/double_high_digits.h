@@ -186,6 +186,7 @@ class Writer : public Print{
       }
       lcd_.setCursor(column_, row_ + 1);
       lcd_.write(outBuf, op - outBuf);
+      column_ += op - outBuf;
     }
 
     size_t write(uint8_t c) override {
