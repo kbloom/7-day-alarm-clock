@@ -19,6 +19,8 @@
 #include <avr/pgmspace.h>
 #include <Print.h>
 
+namespace double_high_digits {
+
 const uint8_t kCustomChars[8][8] PROGMEM = {
   {
     0b01110,
@@ -121,51 +123,94 @@ const CharParts kDigitParts[10] PROGMEM = {
 };
 
 // Templated so that it works with both SerLCD and LiquidCrystal
-// (and any other class that implements the same interface)
+// (and any other class that implements the createChar method.
 template <class LCD>
-class DoubleHighDigits : public Print {
+void Install(LCD& lcd) {
+  for (int i = 0; i < 8; i++) {
+    uint8_t buf[8];
+    memcpy_P(buf, kCustomChars[i], 8);
+    lcd.createChar(i, buf);
+  }
+}
+
+// Templated so that it works with both SerLCD and LiquidCrystal
+// (and any other class that implements the same interface).
+// The Writer class is separate from the install class, so that you
+// can Install directly to an LCD device, and write somewhere else (e.g. a
+// buffer class that will later be written to the LCD in one shot.)
+template <class LCD, size_t WIDTH = 16>
+class Writer : public Print {
   private:
     LCD& lcd_;
-    uint8_t column_;
+    uint8_t column_ = 0;
+    uint8_t row_ = 0;
 
   public:
-    DoubleHighDigits(LCD& lcd): lcd_(lcd) {}
+    Writer(LCD& lcd): lcd_(lcd) {}
 
-    void Install() {
-      for (int i = 0; i < 8; i++) {
-        uint8_t buf[8];
-        memcpy_P(buf, kCustomChars[i], 8);
-        lcd_.createChar(i, buf);
-      }
+    void setCursor(uint8_t col, uint8_t row) {
+      column_ = col;
+      row_ = row;
     }
 
-    void SetColumn(uint8_t col) {
-      column_ = col;
+    size_t write(const char* buffer, size_t size) {
+      char outBuf[WIDTH];
+      char* op = outBuf;
+      for (const char* cp = buffer; cp < buffer + size ; cp++) {
+        char c = *cp;
+        if ('0' <= c && c <= '9') {
+          *op++ = pgm_read_byte(&kDigitParts[c - '0'].top);
+        }
+        if ( c == ':') {
+          *op++ = 0b10100101;
+        }
+        if (c == ' ') {
+          *op++ = ' ';
+        }
+      }
+      lcd_.setCursor(column_, row_);
+      lcd_.write(outBuf, op - outBuf);
+
+      op = outBuf;
+      for (const char* cp = buffer; cp < buffer + size ; cp++) {
+        char c = *cp;
+        if ('0' <= c && c <= '9') {
+          *op++ = pgm_read_byte(&kDigitParts[c - '0'].bottom);
+        }
+        if ( c == ':') {
+          *op++ = 0b10100101;
+        }
+        if (c == ' ') {
+          *op++ = ' ';
+        }
+      }
+      lcd_.setCursor(column_, row_ + 1);
+      lcd_.write(outBuf, op - outBuf);
     }
 
     size_t write(uint8_t c) override {
       if ('0' <= c && c <= '9') {
-        lcd_.setCursor(column_, 0);
+        lcd_.setCursor(column_, row_);
         lcd_.writeChar(pgm_read_byte(&kDigitParts[c - '0'].top));
-        lcd_.setCursor(column_, 1);
+        lcd_.setCursor(column_, row_ + 1);
         lcd_.writeChar(pgm_read_byte(&kDigitParts[c - '0'].bottom));
         column_++;
         return 1;
       }
       if (c == ':') {
-        lcd_.setCursor(column_, 0);
+        lcd_.setCursor(column_, row_);
         // Why did I identify this character in binary?
         // That's the way it's printed on the HD44780 data sheet.
         lcd_.write(0b10100101);
-        lcd_.setCursor(column_, 1);
+        lcd_.setCursor(column_, row_ + 1);
         lcd_.write(0b10100101);
         column_++;
         return 1;
       }
       if (c == ' ') {
-        lcd_.setCursor(column_, 0);
+        lcd_.setCursor(column_, row_);
         lcd_.write(' ');
-        lcd_.setCursor(column_, 1);
+        lcd_.setCursor(column_, row_ + 1);
         lcd_.write(' ');
         column_++;
         return 1;
@@ -173,3 +218,5 @@ class DoubleHighDigits : public Print {
       return 0;
     }
 };
+
+}

@@ -156,7 +156,7 @@ MP3TRIGGER mp3;
 RV1805 rtc;
 
 SerLCD lcd;
-DoubleHighDigits<SerLCD> lcd_tall(lcd);
+double_high_digits::Writer<SerLCD> lcd_tall(lcd);
 FILE* lcd_file;
 FILE* lcd_tall_file;
 
@@ -213,7 +213,7 @@ void PrintTime() {
 
 void PrintTimeTall() {
   Time t = Time::FromClock();
-  lcd_tall.SetColumn(0);
+  lcd_tall.setCursor(0, 0);
   fprintf_P(lcd_tall_file, PSTR("%2d:%02d"), t.hours12(), t.minutes);
   lcd.setCursor(6, 0);
   lcd.print(kDayNames[rtc.getWeekday()]);
@@ -628,7 +628,7 @@ void setup() {
   mp3.begin();
   rtc.begin();
 
-  lcd_tall.Install();
+  double_high_digits::Install(lcd);
   lcd_file = OpenAsFile(lcd);
   lcd_tall_file = OpenAsFile(lcd_tall);
 
