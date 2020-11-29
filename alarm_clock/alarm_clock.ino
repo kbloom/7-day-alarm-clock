@@ -155,9 +155,7 @@ MP3TRIGGER mp3;
 RV1805 rtc;
 
 SerLCD lcd;
-double_high_digits::Writer<SerLCD> lcd_tall(lcd);
 FILE* lcd_file;
-FILE* lcd_tall_file;
 
 // Weekdays are numbered 0-6 on the RV1805
 const char* kDayNames[] = {
@@ -202,8 +200,11 @@ void ExtendSnooze() {
 
 void PrintTimeTall() {
   Time t = Time::FromClock();
-  lcd_tall.setCursor(0, 0);
-  fprintf_P(lcd_tall_file, PSTR("%2d:%02d"), t.hours12(), t.minutes);
+  char buf[6];
+  int len = sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);  
+  double_high_digits::Writer<SerLCD> font(lcd);
+  font.setCursor(0, 0);
+  font.write(buf, len);
   lcd.setCursor(6, 0);
   lcd.print(kDayNames[rtc.getWeekday()]);
   lcd.setCursor(6, 1);
@@ -625,7 +626,6 @@ void setup() {
 
   double_high_digits::Install(lcd);
   lcd_file = OpenAsFile(lcd);
-  lcd_tall_file = OpenAsFile(lcd_tall);
 
   stop_button.setDebounceTime(100);
   snooze_button.setDebounceTime(100);
