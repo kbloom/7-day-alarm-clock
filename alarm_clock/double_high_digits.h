@@ -219,4 +219,4 @@ class Writer : public Print{
     }
 };
 
-}
+} // namespace double_high_digits
