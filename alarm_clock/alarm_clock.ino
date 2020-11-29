@@ -201,10 +201,10 @@ void ExtendSnooze() {
 void PrintTimeTall() {
   Time t = Time::FromClock();
   char buf[6];
-  int len = sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);  
+  sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);  
   double_high_digits::Writer<SerLCD> font(lcd);
   font.setCursor(0, 0);
-  font.write(buf, len);
+  font.print(buf);
   lcd.setCursor(6, 0);
   lcd.print(kDayNames[rtc.getWeekday()]);
   lcd.setCursor(6, 1);
