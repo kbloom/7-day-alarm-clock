@@ -13,11 +13,11 @@ It uses the following components:
    [Example5_ChangeI2CAddress](https://github.com/sparkfun/SparkFun_Qwiic_Button_Arduino_Library/tree/master/examples/Example5_ChangeI2CAddress).
    * [Red SPX-15591](https://www.sparkfun.com/products/15591) for the stop button.
    * [Blue SPX-15592](https://www.sparkfun.com/products/15592) for the snooze button.
- * A speaker
- * Qwiic cables
+ * A speaker. I used [this one](https://www.amazon.com/gp/product/B0738NLFTG).
+ * Qwiic cables.
  * a [wall wart TOL-15314](https://www.sparkfun.com/products/15314)
  * a micro-SD card
- * some sort of enclosure for the final product
+ * some sort of enclosure for the final product. I used [this box](https://www.amazon.com/gp/product/B018QLQFR6). I cut out the square holes with a coping saw, and made the button holes and speaker hole using spade bits.
 
 The idea behind this project is that we can set the time and alarm using the keypad and a menu system.
 
