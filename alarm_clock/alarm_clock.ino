@@ -136,7 +136,6 @@ constexpr int kMainLength = sizeof(main) / sizeof(Item*);
 int operator-(const Time& t, const Time& u);
 int WriteToPrint(char c, FILE* f);
 FILE* OpenAsFile(Print& p);
-bool AlarmTriggeredForTest();
 void ExtendSnooze();
 void PrintTimeTall();
 void PrintNextAlarm();
