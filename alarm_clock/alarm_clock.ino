@@ -132,21 +132,32 @@ constexpr int kMainLength = sizeof(main) / sizeof(Item*);
 
 } // namespace menu
 
+namespace statemachine {
 
-int operator-(const Time& t, const Time& u);
-int WriteToPrint(char c, FILE* f);
-FILE* OpenAsFile(Print& p);
+constexpr int kAlarmLength = 5;
+constexpr int kShabbatAlarmLength = 1;
+constexpr int kSnoozeLength = 8;
+
+void TransitionStateTo(GlobalState new_state);
 void ExtendSnooze();
+void ToggleSkipped();
+void MaybeResetSkipped();
+bool AlarmNow();
+void Handle();
+} // namespace statemachine
+
+namespace display {
 void PrintTimeTall();
 void PrintNextAlarm();
 void PrintShabbatStatus();
 void ClearStatusArea();
-void TransitionStateTo(GlobalState new_state);
+} // namespace display
+
+int operator-(const Time& t, const Time& u);
+int WriteToPrint(char c, FILE* f);
+FILE* OpenAsFile(Print& p);
 Time& TodaysAlarm();
-bool AlarmNow();
 int NextAlarmDay();
-void ToggleSkipped();
-void MaybeResetSkipped();
 
 QwiicButton stop_button;
 QwiicButton snooze_button;
@@ -168,15 +179,11 @@ const char* kDayNames[] = {
   "Sat"
 };
 
-constexpr int kAlarmLength = 5;
-constexpr int kShabbatAlarmLength = 1;
-constexpr int kSnoozeLength = 8;
 
 GlobalState state;
 Time snooze;
 Time alarm_stop;
 PersistentSettings persistent_settings;
-
 
 int WriteToPrint(char c, FILE* f) {
   Print* p = static_cast<Print*>(fdev_get_udata(f));
@@ -187,103 +194,6 @@ FILE* OpenAsFile(Print& p) {
   FILE* f = fdevopen(WriteToPrint, nullptr);
   fdev_set_udata(f, &p);
   return f;
-}
-
-void ExtendSnooze() {
-  if (snooze.state != ACTIVE) {
-    snooze = Time::FromClock();
-  }
-  snooze.state = ACTIVE;
-  snooze += kSnoozeLength;
-
-}
-
-void PrintTimeTall() {
-  Time t = Time::FromClock();
-  char buf[6];
-  sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);  
-  double_high_digits::Writer<SerLCD> font(lcd);
-  font.setCursor(0, 0);
-  font.print(buf);
-  lcd.setCursor(6, 0);
-  lcd.print(kDayNames[rtc.getWeekday()]);
-  lcd.setCursor(6, 1);
-  lcd.print(t.amPMString());
-}
-
-void PrintNextAlarm() {
-  int day = NextAlarmDay();
-  if (day == -1) {
-    ClearStatusArea();
-    return;
-  }
-  lcd.setCursor(13, 0);
-  lcd.print(kDayNames[day]);
-  lcd.setCursor(12, 1);
-  const Time& t = persistent_settings.alarms[day];
-  switch (t.state) {
-    case INACTIVE:
-      lcd.print(F(" Off"));
-      break;
-    case ACTIVE:
-      lcd.print(F("  On"));
-      break;
-    case SKIP_NEXT:
-      lcd.print(F("Skip"));
-      break;
-    case SHABBAT:
-      lcd.print(F("Shbt"));
-      break;
-  }
-}
-
-void PrintShabbatStatus() {
-  lcd.setCursor(13, 0);
-  lcd.print(kDayNames[rtc.getWeekday()]);
-  lcd.setCursor(12, 1);
-  lcd.print(F("Shbt"));  
-}
-
-void ClearStatusArea() {
-  lcd.setCursor(13, 0);
-  lcd.print(F("   "));
-  lcd.setCursor(12, 0);
-  lcd.print(F("    "));
-}
-
-void TransitionStateTo(GlobalState new_state) {
-  if (new_state == state) {
-    return;
-  }
-  if (state == SOUNDING_SHABBAT) {
-    snooze_button.clearEventBits();
-    stop_button.clearEventBits();
-  }
-  if (state == SOUNDING || state == SOUNDING_SHABBAT) {
-    mp3.stop();
-    alarm_stop.state = INACTIVE;
-  }
-  if (state == SNOOZING) {
-    snooze.state = INACTIVE;
-  }
-
-  state = new_state;
-
-  if (new_state == WAITING) {
-  }
-  if (new_state == SOUNDING) {
-    mp3.playFile(1);
-    alarm_stop = Time::FromClock();
-    alarm_stop += kAlarmLength;
-  }
-  if (new_state == SOUNDING_SHABBAT) {
-    mp3.playFile(1);
-    alarm_stop = Time::FromClock();
-    alarm_stop += kShabbatAlarmLength;
-  }
-  if (new_state == SNOOZING) {
-    ExtendSnooze();
-  }
 }
 
 int NextAlarmDay() {
@@ -303,43 +213,6 @@ int NextAlarmDay() {
 
 Time& TodaysAlarm() {
   return persistent_settings.alarms[rtc.getWeekday()];
-}
-
-bool AlarmNow() {
-  const Time& alarm = TodaysAlarm();
-  return !persistent_settings.alarms_off &&
-         (alarm.state == ACTIVE || alarm.state == SHABBAT) &&
-         alarm == Time::FromClock() &&
-         rtc.getSeconds() == 0;
-  // If the user stops the alarm within 1
-  // minute of it triggering, it is still true that
-  // time == Time::FromClock(), and we've returned
-  // to the WAITING state, so the alarm will just start
-  // sounding again. The check for rtc.getSeconds() == 0
-  // prevents that by only allowing us to start the alarm
-  // in the first second of the minute. I think it's safe to
-  // assume that the user won't react within one second.
-}
-
-void ToggleSkipped() {
-  int day = NextAlarmDay();
-  if (day == -1) return;
-  Time& t = persistent_settings.alarms[day];
-  if (t.state == ACTIVE) t.state = SKIP_NEXT;
-  else if (t.state == SKIP_NEXT) t.state = ACTIVE;
-  EEPROM.put(0, persistent_settings);
-}
-
-void MaybeResetSkipped() {
-  Time& alarm = TodaysAlarm();
-  Time now = Time::FromClock();
-  // rtc.getSeconds() == 59 is used to ensure that resetting skipped alarms
-  // happens only after they would have triggered, had they not been skipped.
-  // Triggering (in AlarmNow) only happens when rtc.getSeconds() == 0.
-  if (alarm == now && alarm.state == SKIP_NEXT && rtc.getSeconds() == 59) {
-    alarm.state = ACTIVE;
-    EEPROM.put(0, persistent_settings);
-  }
 }
 
 Time Time::FromClock() {
@@ -618,6 +491,224 @@ void Run(const Item** items, const int n) {
 
 } // namespace menu
 
+namespace statemachine {
+
+void ExtendSnooze() {
+  if (snooze.state != ACTIVE) {
+    snooze = Time::FromClock();
+  }
+  snooze.state = ACTIVE;
+  snooze += kSnoozeLength;
+
+}
+
+void TransitionStateTo(GlobalState new_state) {
+  if (new_state == state) {
+    return;
+  }
+  if (state == SOUNDING_SHABBAT) {
+    snooze_button.clearEventBits();
+    stop_button.clearEventBits();
+  }
+  if (state == SOUNDING || state == SOUNDING_SHABBAT) {
+    mp3.stop();
+    alarm_stop.state = INACTIVE;
+  }
+  if (state == SNOOZING) {
+    snooze.state = INACTIVE;
+  }
+
+  state = new_state;
+
+  if (new_state == WAITING) {
+  }
+  if (new_state == SOUNDING) {
+    mp3.playFile(1);
+    alarm_stop = Time::FromClock();
+    alarm_stop += kAlarmLength;
+  }
+  if (new_state == SOUNDING_SHABBAT) {
+    mp3.playFile(1);
+    alarm_stop = Time::FromClock();
+    alarm_stop += kShabbatAlarmLength;
+  }
+  if (new_state == SNOOZING) {
+    ExtendSnooze();
+  }
+}
+
+void ToggleSkipped() {
+  int day = NextAlarmDay();
+  if (day == -1) return;
+  Time& t = persistent_settings.alarms[day];
+  if (t.state == ACTIVE) t.state = SKIP_NEXT;
+  else if (t.state == SKIP_NEXT) t.state = ACTIVE;
+  EEPROM.put(0, persistent_settings);
+}
+
+void MaybeResetSkipped() {
+  Time& alarm = TodaysAlarm();
+  Time now = Time::FromClock();
+  // rtc.getSeconds() == 59 is used to ensure that resetting skipped alarms
+  // happens only after they would have triggered, had they not been skipped.
+  // Triggering (in AlarmNow) only happens when rtc.getSeconds() == 0.
+  if (alarm == now && alarm.state == SKIP_NEXT && rtc.getSeconds() == 59) {
+    alarm.state = ACTIVE;
+    EEPROM.put(0, persistent_settings);
+  }
+}
+
+bool AlarmNow() {
+  const Time& alarm = TodaysAlarm();
+  return !persistent_settings.alarms_off &&
+         (alarm.state == ACTIVE || alarm.state == SHABBAT) &&
+         alarm == Time::FromClock() &&
+         rtc.getSeconds() == 0;
+  // If the user stops the alarm within 1
+  // minute of it triggering, it is still true that
+  // time == Time::FromClock(), and we've returned
+  // to the WAITING state, so the alarm will just start
+  // sounding again. The check for rtc.getSeconds() == 0
+  // prevents that by only allowing us to start the alarm
+  // in the first second of the minute. I think it's safe to
+  // assume that the user won't react within one second.
+}
+
+void Handle() {
+  rtc.updateTime();
+  Time now = Time::FromClock();
+  MaybeResetSkipped();
+  if (state == WAITING) {
+    bool alarm_now = AlarmNow();
+    if (alarm_now && TodaysAlarm().state == ACTIVE) {
+      TransitionStateTo(SOUNDING);
+    } else if (alarm_now && TodaysAlarm().state == SHABBAT) {
+      TransitionStateTo(SOUNDING_SHABBAT);
+    }  else if (stop_button.hasBeenClicked()) {
+      stop_button.clearEventBits();
+      ToggleSkipped();
+    } else if (snooze_button.hasBeenClicked()) {
+      snooze_button.clearEventBits();
+      TransitionStateTo(SNOOZING);
+    }
+  } else if (state == SNOOZING) {
+    if (snooze == now) {
+      TransitionStateTo(SOUNDING);
+    } else if (stop_button.hasBeenClicked()) {
+      stop_button.clearEventBits();
+      TransitionStateTo(WAITING);
+    } else if (snooze_button.hasBeenClicked()) {
+      snooze_button.clearEventBits();
+      ExtendSnooze();
+    }
+  } else if (state == SOUNDING) {
+    // I have a short MP3 that I want to repeat for a few minutes if
+    // I'm not around to stop the alarm, so we use an explicit alarm_stop timer,
+    // and if the MP3 trigger is found to not be playing, it restarts the alarm.
+    // Other arrangements are possible -- for a long MP3, you may not want to loop.
+    // In that case you can just use mp3.isPlaying() to determine when to transition back
+    // to WAITING, and ignore alarm_stop.
+    if (alarm_stop == now) {
+      TransitionStateTo(WAITING);
+    } else if (!mp3.isPlaying()) {
+      mp3.playFile(1);
+    } else if (stop_button.hasBeenClicked()) {
+      stop_button.clearEventBits();
+      mp3.stop();
+      TransitionStateTo(WAITING);
+    } else if (snooze_button.hasBeenClicked()) {
+      snooze_button.clearEventBits();
+      TransitionStateTo(SNOOZING);
+    }
+  } else if (state == SOUNDING_SHABBAT) {
+    if (alarm_stop == Time::FromClock()) {
+      TransitionStateTo(WAITING);
+    } else if (!mp3.isPlaying()) {
+      mp3.playFile(1);
+    }
+    // Don't respond to buttons in this mode.
+  }
+}
+
+} // namespace statemachine
+
+namespace display {
+
+void PrintTimeTall() {
+  Time t = Time::FromClock();
+  char buf[6];
+  sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);  
+  double_high_digits::Writer<SerLCD> font(lcd);
+  font.setCursor(0, 0);
+  font.print(buf);
+  lcd.setCursor(6, 0);
+  lcd.print(kDayNames[rtc.getWeekday()]);
+  lcd.setCursor(6, 1);
+  lcd.print(t.amPMString());
+}
+
+void PrintNextAlarm() {
+  int day = NextAlarmDay();
+  if (day == -1) {
+    ClearStatusArea();
+    return;
+  }
+  lcd.setCursor(13, 0);
+  lcd.print(kDayNames[day]);
+  lcd.setCursor(12, 1);
+  const Time& t = persistent_settings.alarms[day];
+  switch (t.state) {
+    case INACTIVE:
+      lcd.print(F(" Off"));
+      break;
+    case ACTIVE:
+      lcd.print(F("  On"));
+      break;
+    case SKIP_NEXT:
+      lcd.print(F("Skip"));
+      break;
+    case SHABBAT:
+      lcd.print(F("Shbt"));
+      break;
+  }
+}
+
+void PrintShabbatStatus() {
+  lcd.setCursor(13, 0);
+  lcd.print(kDayNames[rtc.getWeekday()]);
+  lcd.setCursor(12, 1);
+  lcd.print(F("Shbt"));  
+}
+
+void ClearStatusArea() {
+  lcd.setCursor(13, 0);
+  lcd.print(F("   "));
+  lcd.setCursor(12, 0);
+  lcd.print(F("    "));
+}
+
+void PrintMainDisplay() {
+  PrintTimeTall();
+  if (state == SNOOZING) {
+    Time now = Time::FromClock();
+    lcd.setCursor(13, 0);
+    lcd.print(F("Snz"));
+    lcd.setCursor(12, 1);
+    fprintf_P(lcd_file, PSTR("%3dm"), snooze - now);
+  }
+  if (state == SOUNDING_SHABBAT) {
+    PrintShabbatStatus();
+  }
+  if (state == SOUNDING) {
+    ClearStatusArea();
+  }
+  if (state == WAITING) {
+    PrintNextAlarm();
+  }
+}
+
+} // namespace display
+
 void setup() {
   EEPROM.get(0, persistent_settings);
   Wire.begin();
@@ -640,70 +731,12 @@ void setup() {
 
 void loop() {
   keypad.updateFIFO();
-  rtc.updateTime();
-  MaybeResetSkipped();
-  PrintTimeTall();
-  Time now = Time::FromClock();
-  if (state == WAITING) {
-    PrintNextAlarm();
-    bool alarm_now = AlarmNow();
-    if (alarm_now && TodaysAlarm().state == ACTIVE) {
-      TransitionStateTo(SOUNDING);
-    } else if (alarm_now && TodaysAlarm().state == SHABBAT) {
-      TransitionStateTo(SOUNDING_SHABBAT);
-    } else if (keypad.getButton() != 0) {
-      menu::Run(menu::main, menu::kMainLength);
-      EEPROM.put(0, persistent_settings);
-    } else if (stop_button.hasBeenClicked()) {
-      stop_button.clearEventBits();
-      ToggleSkipped();
-    } else if (snooze_button.hasBeenClicked()) {
-      snooze_button.clearEventBits();
-      TransitionStateTo(SNOOZING);
-    }
-  } else if (state == SNOOZING) {
-    lcd.setCursor(13, 0);
-    lcd.print(F("Snz"));
-    lcd.setCursor(12, 1);
-    fprintf_P(lcd_file, PSTR("%3dm"), snooze - now);
-    if (snooze == now) {
-      TransitionStateTo(SOUNDING);
-    } else if (stop_button.hasBeenClicked()) {
-      stop_button.clearEventBits();
-      TransitionStateTo(WAITING);
-    } else if (snooze_button.hasBeenClicked()) {
-      snooze_button.clearEventBits();
-      ExtendSnooze();
-    }
-  } else if (state == SOUNDING) {
-    ClearStatusArea();
-    // I have a short MP3 that I want to repeat for a few minutes if
-    // I'm not around to stop the alarm, so we use an explicit alarm_stop timer,
-    // and if the MP3 trigger is found to not be playing, it restarts the alarm.
-    // Other arrangements are possible -- for a long MP3, you may not want to loop.
-    // In that case you can just use mp3.isPlaying() to determine when to transition back
-    // to WAITING, and ignore alarm_stop.
-    if (alarm_stop == now) {
-      TransitionStateTo(WAITING);
-    } else if (!mp3.isPlaying()) {
-      mp3.playFile(1);
-    } else if (stop_button.hasBeenClicked()) {
-      stop_button.clearEventBits();
-      mp3.stop();
-      TransitionStateTo(WAITING);
-    } else if (snooze_button.hasBeenClicked()) {
-      snooze_button.clearEventBits();
-      TransitionStateTo(SNOOZING);
-    }
-  } else if (state == SOUNDING_SHABBAT) {
-    PrintShabbatStatus();
-    if (alarm_stop == Time::FromClock()) {
-      TransitionStateTo(WAITING);
-    } else if (!mp3.isPlaying()) {
-      mp3.playFile(1);
-    }
-    // Don't respond to buttons in this mode.
+  if (keypad.getButton() != 0 && state != SOUNDING_SHABBAT) {
+    menu::Run(menu::main, menu::kMainLength);
+    EEPROM.put(0, persistent_settings);
   }
+  statemachine::Handle();
+  display::PrintMainDisplay();
 
   delay(50);
 }
