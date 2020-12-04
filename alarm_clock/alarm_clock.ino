@@ -270,6 +270,7 @@ char ReadChar() {
     if (keypad.getButton() != 0) {
       return keypad.getButton();
     }
+    statemachine::Handle();
   }
 }
 
@@ -439,7 +440,7 @@ void SoundSettings::Display() {
 }
 
 void SoundSettings::Handle(const char c) {
-  if (!mp3.isPlaying()) mp3.playFile(1);
+  if (state != SOUNDING && state != SOUNDING_SHABBAT && !mp3.isPlaying()) mp3.playFile(1);
   if (c == '4') {
     mp3.setVolume(mp3.getVolume() - 1);
   }
@@ -459,7 +460,9 @@ void SoundSettings::Handle(const char c) {
 }
 
 void SoundSettings::Leave() {
-  mp3.stop();
+  if (state != SOUNDING && state != SOUNDING_SHABBAT) {
+    mp3.stop();
+  }
 }
 
 
