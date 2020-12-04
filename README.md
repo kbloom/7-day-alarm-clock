@@ -33,7 +33,7 @@ Additionally, you'll need a micro-USB cable to program the RedBoard, and you'll
 either need a USB-C cable or a Micro SD card reader to put an MP3 on the Micro
 SD card for when your alarm goes off.
 
-# Preparing your development environment
+# Assembling the electronics
 
 1. Download and install the Arduino IDE from https://www.arduino.cc/en/software
 2. Use the library manager within the Arduino IDE to install the following libraries:
