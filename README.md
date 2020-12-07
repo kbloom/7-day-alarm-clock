@@ -126,7 +126,7 @@ The alarm has 4 states:
  * Sounding
    * Hitting the snooze button will stop the alarm and start snoozing for 8 minutes.
    * Hitting hte stop button will stop the alarm  and transition to the waiting state for the next day's alarm.
- * The alarm also supports a shabbat mode alarm, which sounds for one minute, cannot be skipped if you wake up early, and all buttons are disabled while it is sounding. For some halachic discussion of the permissibility of setting an alarm on Shabbat, see [this article](http://halachayomit.co.il/en/default.aspx?HalachaID=3914).
+ * The alarm also supports a shabbat mode alarm, which sounds for 30 seconds, cannot be skipped if you wake up early, and all buttons are disabled while it is sounding. For some halachic discussion of the permissibility of setting an alarm on Shabbat, see [this article](http://halachayomit.co.il/en/default.aspx?HalachaID=3914).
 
 ## Menu navigation:
 

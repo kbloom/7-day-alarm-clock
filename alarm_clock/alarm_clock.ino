@@ -135,7 +135,6 @@ constexpr int kMainLength = sizeof(main) / sizeof(Item*);
 namespace statemachine {
 
 constexpr int kAlarmLength = 5;
-constexpr int kShabbatAlarmLength = 1;
 constexpr int kSnoozeLength = 8;
 
 void TransitionStateTo(GlobalState new_state);
@@ -533,8 +532,6 @@ void TransitionStateTo(GlobalState new_state) {
   }
   if (new_state == SOUNDING_SHABBAT) {
     mp3.playFile(1);
-    alarm_stop = Time::FromClock();
-    alarm_stop += kShabbatAlarmLength;
   }
   if (new_state == SNOOZING) {
     ExtendSnooze();
@@ -625,7 +622,7 @@ void Handle() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SOUNDING_SHABBAT) {
-    if (alarm_stop == Time::FromClock()) {
+    if (TodaysAlarm() == Time::FromClock() && rtc.getSeconds() >= 30) {
       TransitionStateTo(WAITING);
     } else if (!mp3.isPlaying()) {
       mp3.playFile(1);
