@@ -144,6 +144,7 @@ void ToggleSkipped();
 void MaybeResetSkipped();
 bool AlarmNow();
 void Handle();
+void HandleForMillis(unsigned long ms);
 } // namespace statemachine
 
 namespace display {
@@ -284,7 +285,7 @@ int InputWeekday() {
   }
   lcd.clear();
   lcd.println(F("Invalid time."));
-  delay(1000);
+  statemachine::HandleForMillis(1000);
   return -1;
 }
 
@@ -323,7 +324,7 @@ bool InputTime(Time& result) {
   if (hours24 >= 24 || minutes >= 60) {
     lcd.clear();
     lcd.println(F("Invalid time."));
-    delay(1000);
+    statemachine::HandleForMillis(1000);
     return false;
   }
 
@@ -631,6 +632,14 @@ void Handle() {
     }
     // Don't respond to buttons in this mode.
   }
+}
+
+void HandleForMillis(unsigned long ms) {
+  unsigned long start = millis();
+  do {
+    Handle();
+    delay(50);
+  } while (millis() - start <= ms);
 }
 
 } // namespace statemachine
