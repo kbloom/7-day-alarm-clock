@@ -646,7 +646,7 @@ namespace display {
 void PrintTimeTall() {
   Time t = Time::FromClock();
   char buf[6];
-  sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);  
+  sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);
   double_high_digits::Writer<SerLCD> font(lcd);
   font.setCursor(0, 0);
   font.print(buf);
@@ -686,7 +686,7 @@ void PrintShabbatStatus() {
   lcd.setCursor(13, 0);
   lcd.print(kDayNames[rtc.getWeekday()]);
   lcd.setCursor(12, 1);
-  lcd.print(F("Shbt"));  
+  lcd.print(F("Shbt"));
 }
 
 void ClearStatusArea() {
