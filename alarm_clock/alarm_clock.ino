@@ -75,6 +75,14 @@ struct PersistentSettings {
   bool alarms_off;
 };
 
+// Things are organized into namespaces to allow irrelevant sections
+// of the code to be folded up when I'm not coding on one of them.
+// The use of multiple namespaces was easier than splitting this project
+// into several .h and .cc files, because they all have circular dependencies,
+// and they all have a dependency on the device objects.
+// The namespaces also ensure that related functionality is located
+// in close proximity in the code.
+
 namespace menu {
 
 char ReadChar();
@@ -82,8 +90,16 @@ bool InputTime(Time& result);
 int InputWeekday();
 
 struct Item {
+  // Called when the user enters this menu item, or after handling a keypress.
   virtual void Display() {}
+  // Handle is used to handle any keypress that's not
+  // up/down/exit navigation (which are enforced by
+  // menu::Run for menu UI consistency).
+  // This function doesn't have to return immediately.
+  // It can implement its own UI and read more
+  // keypresses itself before returning.
   virtual void Handle(char c) {}
+  // Called when the user navigates off of this menu item.
   virtual void Leave() {}
 };
 
@@ -263,6 +279,8 @@ const char* Time::amPMString() {
 
 namespace menu {
 
+// Waits for a keypress on the keypad, and returns the
+// keypress. While it waits, it handles statemachine events.
 char ReadChar() {
   while (1) {
     delay(50);
@@ -631,6 +649,11 @@ void Handle() {
   }
 }
 
+// Runs Handle in a loop for ms milliseconds.
+// This is used in the menu system instead of delay()
+// for long pauses where the menu system expects no user input
+// (e.g. when displaying an error message.)
+// to ensure that state machine events are handled during that time.
 void HandleForMillis(unsigned long ms) {
   unsigned long start = millis();
   do {
@@ -645,6 +668,11 @@ namespace display {
 
 void PrintTimeTall() {
   Time t = Time::FromClock();
+  // sprintf is used here (instead of opening font as a FILE* and using fprintf)
+  // in order to speed the display by minimizing the number of calls to lcd.setCursor,
+  // which is slow. It's not a super big problem, but we do want to call
+  // statemachine::Handle at least once a second, and the slow updates were making
+  // me nervous.
   char buf[6];
   sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);
   double_high_digits::Writer<SerLCD> font(lcd);
