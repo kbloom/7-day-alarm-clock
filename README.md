@@ -1,4 +1,8 @@
-This is a project to create an alarm clock with separate alarm times for each day of the week. It is based on an Arduino and the Sparkfun Qwicc system.
+This is a project to create an alarm clock with separate alarm times for each day of the week.
+It is inspired by the Neverlate alarm clock by American Innovative, which served me for well
+over a decade before its time-setting knob started malfunctioning. As the company is now out
+of business, and the alarm clcok cannot be found for sale anymore, I decided to build a
+replacement.
 
 ![Exterior](exterior.jpg)
 
