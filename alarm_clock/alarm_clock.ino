@@ -317,22 +317,34 @@ bool InputTime(Time& result) {
   c[2] = 0;
 
   c[0] = ReadChar();
-  if (c[0] == '#' || c[0] == '*') goto user_exit;
+  if (c[0] == '#' || c[0] == '*') {
+    lcd.noBlink();
+    return false;
+  }
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (c[1] == '#' || c[1] == '*') goto user_exit;
+  if (c[1] == '#' || c[1] == '*') {
+    lcd.noBlink();
+    return false;
+  }
   lcd.print(c[1]);
   lcd.print(':');
 
   uint8_t hours24 = atoi(c);
 
   c[0] = ReadChar();
-  if (c[0] == '#' || c[0] == '*') goto user_exit;
+  if (c[0] == '#' || c[0] == '*') {
+    lcd.noBlink();
+    return false;
+  }
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (c[1] == '#' || c[1] == '*') goto user_exit;
+  if (c[1] == '#' || c[1] == '*') {
+    lcd.noBlink();
+    return false;
+  }
   lcd.print(c[1]);
 
   uint8_t minutes = atoi(c);
@@ -348,10 +360,6 @@ bool InputTime(Time& result) {
   result.hours24 = hours24;
   result.minutes = minutes;
   return true;
-
-user_exit:
-  lcd.noBlink();
-  return false;
 }
 
 SetAlarm::SetAlarm(int day) : day_(day) {}
