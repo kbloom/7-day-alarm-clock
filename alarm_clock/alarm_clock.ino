@@ -767,8 +767,8 @@ void setup() {
   double_high_digits::Install(lcd);
   lcd_file = OpenAsFile(lcd);
 
-  stop_button.setDebounceTime(150);
-  snooze_button.setDebounceTime(150);
+  stop_button.setDebounceTime(1000);
+  snooze_button.setDebounceTime(200);
   rtc.set24Hour();
   lcd.setFastBacklight(255, 0, 0);
   state = WAITING;
