@@ -139,7 +139,7 @@ void Install(LCD& lcd) {
 // can Install directly to an LCD device, and write somewhere else (e.g. a
 // buffer class that will later be written to the LCD in one shot.)
 template <class LCD, size_t WIDTH = 16>
-class Writer : public Print{
+class Writer : public Print {
   private:
     LCD& lcd_;
     uint8_t column_ = 0;
@@ -187,7 +187,7 @@ class Writer : public Print{
       lcd_.setCursor(column_, row_ + 1);
       lcd_.write(outBuf, op - outBuf);
       column_ += op - outBuf;
-      return op-outBuf;
+      return op - outBuf;
     }
 
     size_t write(uint8_t c) override {
