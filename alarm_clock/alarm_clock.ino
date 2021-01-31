@@ -474,9 +474,9 @@ void SoundSettings::Handle(const char c) const {
     mp3.setVolume(mp3.getVolume() + 1);
   }
   if (c == '7') {
-    byte newEq = mp3.getEQ() - 1;
-    if (newEq < 0) newEq = 0;
-    mp3.setEQ(newEq);
+    byte eq = mp3.getEQ();
+    if (eq==0) return;
+    mp3.setEQ(eq - 1);
   }
   if (c == '9') {
     byte newEq = mp3.getEQ() + 1;
