@@ -156,7 +156,7 @@ class Writer : public Print{
     size_t write(const uint8_t* buffer, size_t size) override {
       char outBuf[WIDTH];
       char* op = outBuf;
-      for (const char* cp = buffer; cp < buffer + size ; cp++) {
+      for (const uint8_t* cp = buffer; cp < buffer + size ; cp++) {
         char c = *cp;
         if ('0' <= c && c <= '9') {
           *op++ = pgm_read_byte(&kDigitParts[c - '0'].top);
@@ -172,7 +172,7 @@ class Writer : public Print{
       lcd_.write(outBuf, op - outBuf);
 
       op = outBuf;
-      for (const char* cp = buffer; cp < buffer + size ; cp++) {
+      for (const uint8_t* cp = buffer; cp < buffer + size ; cp++) {
         char c = *cp;
         if ('0' <= c && c <= '9') {
           *op++ = pgm_read_byte(&kDigitParts[c - '0'].bottom);

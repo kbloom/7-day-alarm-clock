@@ -50,15 +50,15 @@ enum TimeState {
 struct Time {
   uint8_t hours24;
   uint8_t minutes;
-  uint8_t hours12();
-  const char* amPMString();
+  uint8_t hours12() const;
+  const char* amPMString() const;
   TimeState state = INACTIVE;
   Time& operator+=(int minutes);
   static Time FromClock();
-  bool operator==(const Time& other) {
+  bool operator==(const Time& other) const {
     return hours24 == other.hours24 && minutes == other.minutes;
   }
-  bool operator<(const Time& other) {
+  bool operator<(const Time& other) const {
     if (hours24 < other.hours24) {
       return true;
     }
@@ -260,7 +260,7 @@ int operator-(const Time& t, const Time& u) {
   return diff;
 }
 
-uint8_t Time::hours12() {
+uint8_t Time::hours12() const {
   if (hours24 == 0) {
     return 12;
   }
@@ -270,7 +270,7 @@ uint8_t Time::hours12() {
   return hours24;
 }
 
-const char* Time::amPMString() {
+const char* Time::amPMString() const {
   if (hours24 >= 12) {
     return "pm";
   }
