@@ -154,8 +154,8 @@ class Writer : public Print{
     }
 
     size_t write(const uint8_t* buffer, size_t size) override {
-      char outBuf[WIDTH];
-      char* op = outBuf;
+      uint8_t outBuf[WIDTH];
+      uint8_t* op = outBuf;
       for (const uint8_t* cp = buffer; cp < buffer + size ; cp++) {
         char c = *cp;
         if ('0' <= c && c <= '9') {
@@ -187,6 +187,7 @@ class Writer : public Print{
       lcd_.setCursor(column_, row_ + 1);
       lcd_.write(outBuf, op - outBuf);
       column_ += op - outBuf;
+      return op-outBuf;
     }
 
     size_t write(uint8_t c) override {

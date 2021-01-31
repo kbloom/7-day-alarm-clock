@@ -91,40 +91,40 @@ int InputWeekday();
 
 struct Item {
   // Called when the user enters this menu item, or after handling a keypress.
-  virtual void Display() {}
+  virtual void Display() const {}
   // Handle is used to handle any keypress that's not
   // up/down/exit navigation (which are enforced by
   // menu::Run for menu UI consistency).
   // This function doesn't have to return immediately.
   // It can implement its own UI and read more
   // keypresses itself before returning.
-  virtual void Handle(char c) {}
+  virtual void Handle(char c) const {}
   // Called when the user navigates off of this menu item.
-  virtual void Leave() {}
+  virtual void Leave() const {}
 };
 
 struct SetClock : public Item {
-  void Display() override;
-  void Handle(char c) override;
+  void Display() const override;
+  void Handle(char c) const override;
 };
 
 struct AllAlarms : public Item {
-  void Display() override;
-  void Handle(char c) override;
+  void Display() const override;
+  void Handle(char c) const override;
 };
 
 struct SetAlarm : public Item {
     SetAlarm(int day);
-    void Display() override;
-    void Handle(char c) override;
+    void Display() const override;
+    void Handle(char c) const override;
   private:
     int day_;
 };
 
 struct SoundSettings : public Item {
-  void Display() override;
-  void Handle(char c) override;
-  void Leave() override;
+  void Display() const override;
+  void Handle(char c) const override;
+  void Leave() const override;
 };
 
 
@@ -203,7 +203,7 @@ PersistentSettings persistent_settings;
 
 int WriteToPrint(char c, FILE* f) {
   Print* p = static_cast<Print*>(fdev_get_udata(f));
-  p->print(c);
+  return p->print(c);
 }
 
 FILE* OpenAsFile(Print& p) {
@@ -364,7 +364,7 @@ bool InputTime(Time& result) {
 
 SetAlarm::SetAlarm(int day) : day_(day) {}
 
-void SetAlarm::Display() {
+void SetAlarm::Display() const {
   const Time& time = persistent_settings.alarms[day_];
   lcd.clear();
 
@@ -386,7 +386,7 @@ void SetAlarm::Display() {
   }
 }
 
-void SetAlarm::Handle(char c) {
+void SetAlarm::Handle(char c) const {
   Time& alarm = persistent_settings.alarms[day_];
   if (c == '5') {
     if (!InputTime(alarm) && alarm.state != SHABBAT) {
@@ -407,7 +407,7 @@ void SetAlarm::Handle(char c) {
   }
 }
 
-void SetClock::Display() {
+void SetClock::Display() const {
   Time t = Time::FromClock();
   lcd.setCursor(0, 0);
   lcd.println(F("Set Clock"));
@@ -418,7 +418,7 @@ void SetClock::Display() {
             t.amPMString());
 }
 
-void SetClock::Handle(char c) {
+void SetClock::Handle(char c) const {
   if (c != '5') return;
   int d = InputWeekday();
   if (d == -1) return;
@@ -427,7 +427,7 @@ void SetClock::Handle(char c) {
   rtc.setTime(0, 0, t.minutes, t.hours24, 1, 1, 2000, d);
 }
 
-void AllAlarms::Display() {
+void AllAlarms::Display() const {
   if (persistent_settings.alarms_off) {
     lcd.println(F("Alarm Disabled"));
   } else {
@@ -435,13 +435,13 @@ void AllAlarms::Display() {
   }
 }
 
-void AllAlarms::Handle(char c) {
+void AllAlarms::Handle(char c) const {
   if (c == '4' || c == '5' || c == '6') {
     persistent_settings.alarms_off = !persistent_settings.alarms_off;
   }
 }
 
-void SoundSettings::Display() {
+void SoundSettings::Display() const {
   fprintf_P(lcd_file, PSTR("4/6 Volume: %d\r\n"), mp3.getVolume());
   lcd.print("7/9 Eq: ");
   byte eq = mp3.getEQ();
@@ -465,7 +465,7 @@ void SoundSettings::Display() {
   }
 }
 
-void SoundSettings::Handle(const char c) {
+void SoundSettings::Handle(const char c) const {
   if (state != SOUNDING && state != SOUNDING_SHABBAT && !mp3.isPlaying()) mp3.playFile(1);
   if (c == '4') {
     mp3.setVolume(mp3.getVolume() - 1);
@@ -485,7 +485,7 @@ void SoundSettings::Handle(const char c) {
   }
 }
 
-void SoundSettings::Leave() {
+void SoundSettings::Leave() const {
   if (state != SOUNDING && state != SOUNDING_SHABBAT) {
     mp3.stop();
   }
