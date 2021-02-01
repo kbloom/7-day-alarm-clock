@@ -98,7 +98,7 @@ struct Item {
   // This function doesn't have to return immediately.
   // It can implement its own UI and read more
   // keypresses itself before returning.
-  virtual void Handle(char c) const {}
+  virtual void Handle(char) const {}
   // Called when the user navigates off of this menu item.
   virtual void Leave() const {}
 };
@@ -383,6 +383,9 @@ void SetAlarm::Display() const {
     case SHABBAT:
       lcd.print(F("Shabbat"));
       break;
+    case kMaxTimeState:
+      lcd.print(F("BUG: kMaxTimeState"));
+      break;
   }
 }
 
@@ -394,16 +397,18 @@ void SetAlarm::Handle(char c) const {
     }
   }
   if (c == '4') {
-    alarm.state = alarm.state - 1;
-    if (alarm.state < 0 || alarm.state >= kMaxTimeState) {
-      alarm.state = kMaxTimeState - 1;
+    int new_state = static_cast<int>(alarm.state) - 1;
+    if (new_state < 0 || new_state >= kMaxTimeState) {
+      new_state = kMaxTimeState - 1;
     }
+    alarm.state = static_cast<TimeState>(new_state);
   }
   if (c == '6') {
-    alarm.state = alarm.state + 1;
-    if (alarm.state >= kMaxTimeState) {
-      alarm.state = 0;
+    int new_state = static_cast<int>(alarm.state) - 1;
+    if (new_state >= kMaxTimeState) {
+      new_state = 0;
     }
+    alarm.state = static_cast<TimeState>(new_state);
   }
 }
 
@@ -714,6 +719,9 @@ void PrintNextAlarm() {
       break;
     case SHABBAT:
       lcd.print(F("Shbt"));
+      break;
+    case kMaxTimeState:
+      lcd.print(F("    "));
       break;
   }
 }
