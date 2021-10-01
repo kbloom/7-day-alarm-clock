@@ -392,19 +392,19 @@ void SetAlarm::Display() const {
 void SetAlarm::Handle(char c) const {
   Time& alarm = persistent_settings.alarms[day_];
   if (c == '5') {
-    if (!InputTime(alarm) && alarm.state != SHABBAT) {
+    if (InputTime(alarm) && alarm.state != SHABBAT) {
       alarm.state = ACTIVE;
     }
   }
   if (c == '4') {
     int new_state = static_cast<int>(alarm.state) - 1;
-    if (new_state < 0 || new_state >= kMaxTimeState) {
+    if (new_state < 0) {
       new_state = kMaxTimeState - 1;
     }
     alarm.state = static_cast<TimeState>(new_state);
   }
   if (c == '6') {
-    int new_state = static_cast<int>(alarm.state) - 1;
+    int new_state = static_cast<int>(alarm.state) + 1;
     if (new_state >= kMaxTimeState) {
       new_state = 0;
     }
