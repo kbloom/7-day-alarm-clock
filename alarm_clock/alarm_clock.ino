@@ -777,13 +777,8 @@ void setup() {
 
   // I've found these buttons to be very finicky in dry weather, so I'm trying
   // to give them long debounce times.
-  // stop_button gets a very long debounce time, because double-clicking it
-  // isn't really a normal operation.
   stop_button.setDebounceTime(1000);
-  // snooze_button can be double-clicked (to set 16 minute snoozes, for example),
-  // so we're taking on more risk of a bounce, in order for double-clicking to
-  // be responsive.
-  snooze_button.setDebounceTime(200);
+  snooze_button.setDebounceTime(1000);
   rtc.set24Hour();
   lcd.setFastBacklight(255, 0, 0);
   state = WAITING;
