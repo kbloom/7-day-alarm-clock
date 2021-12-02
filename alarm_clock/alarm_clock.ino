@@ -741,6 +741,11 @@ void ClearStatusArea() {
 }
 
 void PrintMainDisplay() {
+  if (stop_button.isPressed() || snooze_button.isPressed()) {
+    lcd.setFastBacklight(255, 32, 0);
+  } else {
+    lcd.setFastBacklight(255, 0, 0);
+  }
   PrintTimeTall();
   if (state == SNOOZING) {
     Time now = Time::FromClock();
