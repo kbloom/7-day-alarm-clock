@@ -498,7 +498,7 @@ void SoundSettings::Leave() const {
 
 
 void Run(const Item** items, const int n) {
-  lcd.setFastBacklight(0, 0, 255);
+  lcd.setFastBacklight(0, 255, 127);
   int cur = 0;
   while (true) {
     lcd.clear();
