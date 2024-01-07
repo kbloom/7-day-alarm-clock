@@ -541,14 +541,17 @@ void TransitionStateTo(GlobalState new_state) {
     return;
   }
   if (state == SOUNDING_SHABBAT) {
+    Serial.println(F("Transitioning from SOUNDING_SHABBAT"));
     snooze_button.clearEventBits();
     stop_button.clearEventBits();
   }
   if (state == SOUNDING || state == SOUNDING_SHABBAT) {
+    Serial.println(F("Transitioning from SOUNDING"));
     mp3.stop();
     alarm_stop.state = INACTIVE;
   }
   if (state == SNOOZING) {
+    Serial.println(F("Transitioning from SNOOZING"));
     snooze.state = INACTIVE;
   }
 
@@ -557,14 +560,17 @@ void TransitionStateTo(GlobalState new_state) {
   if (new_state == WAITING) {
   }
   if (new_state == SOUNDING) {
+    Serial.println(F("Transitioning to SOUNDING"));
     mp3.playFile(1);
     alarm_stop = Time::FromClock();
     alarm_stop += kAlarmLength;
   }
   if (new_state == SOUNDING_SHABBAT) {
+    Serial.println(F("Transitioning to SOUNDING_SHABBAT"));
     mp3.playFile(1);
   }
   if (new_state == SNOOZING) {
+    Serial.println(F("Transitioning to SNOOZING"));
     ExtendSnooze();
   }
 }
@@ -769,6 +775,7 @@ void PrintMainDisplay() {
 
 void setup() {
   EEPROM.get(0, persistent_settings);
+  Serial.begin(9600);
   Wire.begin();
   lcd.begin(Wire);
   stop_button.begin();
