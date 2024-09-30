@@ -470,7 +470,13 @@ void SoundSettings::Display() const {
 }
 
 void SoundSettings::Handle(const char c) const {
-  if (state != SOUNDING && state != SOUNDING_SHABBAT && !mp3.isPlaying()) mp3.playFile(1);
+  if (state != SOUNDING && state != SOUNDING_SHABBAT && !mp3.isPlaying()) {
+    mp3.playFile(1);
+    Serial.println(mp3.getStatus());
+    Serial.println(mp3.hasCard());
+    Serial.println(mp3.getSongCount());
+    Serial.println(mp3.getSongName());
+  }
   if (c == '4') {
     mp3.setVolume(mp3.getVolume() - 1);
   }
@@ -557,6 +563,7 @@ void TransitionStateTo(GlobalState new_state) {
   state = new_state;
 
   if (new_state == WAITING) {
+    Serial.println(F("Transitioning to WAITING"));
   }
   if (new_state == SOUNDING) {
     Serial.println(F("Transitioning to SOUNDING"));
