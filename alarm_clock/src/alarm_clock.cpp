@@ -150,7 +150,6 @@ constexpr int kMainLength = sizeof(main) / sizeof(Item*);
 
 namespace statemachine {
 
-constexpr int kAlarmLength = 5;
 constexpr int kSnoozeLength = 8;
 
 void TransitionStateTo(GlobalState new_state);
@@ -562,12 +561,10 @@ void TransitionStateTo(GlobalState new_state) {
   if (new_state == SOUNDING) {
     Serial.println(F("Transitioning to SOUNDING"));
     mp3.playFile(1);
-    alarm_stop = Time::FromClock();
-    alarm_stop += kAlarmLength;
   }
   if (new_state == SOUNDING_SHABBAT) {
     Serial.println(F("Transitioning to SOUNDING_SHABBAT"));
-    mp3.playFile(1);
+    mp3.playFile(2);
   }
   if (new_state == SNOOZING) {
     Serial.println(F("Transitioning to SNOOZING"));
@@ -640,16 +637,8 @@ void Handle() {
       ExtendSnooze();
     }
   } else if (state == SOUNDING) {
-    // I have a short MP3 that I want to repeat for a few minutes if
-    // I'm not around to stop the alarm, so we use an explicit alarm_stop timer,
-    // and if the MP3 trigger is found to not be playing, it restarts the alarm.
-    // Other arrangements are possible -- for a long MP3, you may not want to loop.
-    // In that case you can just use mp3.isPlaying() to determine when to transition back
-    // to WAITING, and ignore alarm_stop.
-    if (alarm_stop == now) {
+    if (!mp3.isPlaying()) {
       TransitionStateTo(WAITING);
-    } else if (!mp3.isPlaying()) {
-      mp3.playFile(1);
     } else if (stop_button.hasBeenClicked()) {
       stop_button.clearEventBits();
       mp3.stop();
@@ -659,10 +648,8 @@ void Handle() {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SOUNDING_SHABBAT) {
-    if (TodaysAlarm() == Time::FromClock() && rtc.getSeconds() >= 30) {
+    if (!mp3.isPlaying()) {
       TransitionStateTo(WAITING);
-    } else if (!mp3.isPlaying()) {
-      mp3.playFile(1);
     }
     // Don't respond to buttons in this mode.
   }
