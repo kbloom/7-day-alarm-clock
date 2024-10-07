@@ -114,7 +114,7 @@ struct AllAlarms : public Item {
 };
 
 struct SetAlarm : public Item {
-    SetAlarm(int day);
+    SetAlarm(int day):day_(day){}
     void Display() const override;
     void Handle(char c) const override;
   private:
@@ -125,6 +125,15 @@ struct SoundSettings : public Item {
   void Display() const override;
   void Handle(char c) const override;
   void Leave() const override;
+};
+
+struct SoundTest : public Item {
+    SoundTest(int num):num_(num){}
+    void Display() const override;
+    void Handle(char c) const override;
+    void Leave() const override;
+  private:
+    int num_;
 };
 
 
@@ -142,6 +151,8 @@ const Item* main[] = {
   new SetAlarm(5),
   new SetAlarm(6),
   new SoundSettings,
+  new SoundTest(1),
+  new SoundTest(2),
 };
 
 constexpr int kMainLength = sizeof(main) / sizeof(Item*);
@@ -361,8 +372,6 @@ bool InputTime(Time& result) {
   return true;
 }
 
-SetAlarm::SetAlarm(int day) : day_(day) {}
-
 void SetAlarm::Display() const {
   const Time& time = persistent_settings.alarms[day_];
   lcd.clear();
@@ -496,6 +505,31 @@ void SoundSettings::Handle(const char c) const {
 }
 
 void SoundSettings::Leave() const {
+  if (state != SOUNDING && state != SOUNDING_SHABBAT) {
+    mp3.stop();
+  }
+}
+
+void SoundTest::Display() const {
+  lcd.println(F("Test Sound File"));
+  fprintf_P(lcd_file, PSTR("F%03d.mp3"), num_);
+}
+
+void SoundTest::Handle(const char c) const {
+  if (state == SOUNDING || state == SOUNDING_SHABBAT) return;
+  if (c == '6') {
+    mp3.playFile(num_);
+    Serial.println(mp3.getStatus());
+    Serial.println(mp3.hasCard());
+    Serial.println(mp3.getSongCount());
+    Serial.println(mp3.getSongName());
+  }
+  if (c=='4') {
+    mp3.stop();
+  }
+}
+
+void SoundTest::Leave() const {
   if (state != SOUNDING && state != SOUNDING_SHABBAT) {
     mp3.stop();
   }
