@@ -605,7 +605,7 @@ void TransitionStateTo(GlobalState new_state) {
   }
   if (new_state == SOUNDING_SHABBAT) {
     Serial.println(F("Transitioning to SOUNDING_SHABBAT"));
-    mp3.playFile(1);
+    mp3.playFile(2);
   }
   if (new_state == SNOOZING) {
     Serial.println(F("Transitioning to SNOOZING"));

@@ -48,10 +48,17 @@ SD card for when your alarm goes off.
    * SparkFun Qwiic Keypad Arduino Library
    * SerLCD
 
-3. Put an MP3 on your SD Card. If you don't have a separate Micro SD card
+3. Put two MP3s on your SD Card, one for the weekday alarm, and one for the
+   shabbat alarm. If you don't have a separate Micro SD card
    reader, you the MP3 Trigger board can act as a Micro SD card reader by
-   connecting it to your computer using a USB-C cable. The MP3 needs to be
-   named `F001.mp3`.
+   connecting it to your computer using a USB-C cable. The MP3 for the weekday
+   alarm needs to be named `F001.mp3`, and the MP3 for the shabbat alarm needs
+   to be named `F002.mp3`. When the alarm goes off, the appropriate MP3 will be
+   played through once (unless you hit the stop button to stop the weekday
+   alarm early), so make sure that the MP3s are the length that you want the
+   alarm to ring for. For example, if you want your shabbat alarm to ring for
+   only 10 seconds before automatically stopping, `F002.mp3` should be 10
+   seconds long.
 
 4. Connect components individually to the RedBoard and run some examples to
    verify that your components work individually.
