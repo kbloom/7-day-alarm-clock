@@ -299,19 +299,23 @@ bool IsExitChar(char c) {
 
 // Waits for a keypress on the keypad, and returns the
 // keypress. While it waits, it handles statemachine events.
+// Returns an ExitChar if the menu has been waiting too long since the last
+// keypress. This eventually gets us back to showing the clock (though it may
+// take multiple calls to ReadChar to exit nested input flows.)
 char ReadChar() {
   while (1) {
+    if (millis() - lastInputTime > kMenuTimeoutMillis) {
+      return '*';
+      // If you're in a text entry field, it may take multiple cancels to get
+      // back to the clock screen. But we don't reset lastInputTime, so
+      // subsequent calls to ReadChar will also timeout until we're back at the
+      // main clock screen.
+    }
     delay(50);
     keypad.updateFIFO();
     if (keypad.getButton() != 0) {
       lastInputTime=millis();
       return keypad.getButton();
-    }
-    if (millis() - lastInputTime > kMenuTimeoutMillis) {
-      // if you're in a text entry field, it may take multiple cancels to get back
-      // to the clock screen. So we'll set up for another timeout to cancel the next screen.
-      lastInputTime=millis();
-      return '*';
     }
     statemachine::Handle();
   }
