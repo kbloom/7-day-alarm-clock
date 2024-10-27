@@ -136,6 +136,7 @@ struct SoundTest : public Item {
     int num_;
 };
 
+bool CheckPasswordChar(char c);
 
 
 void Run(const Item** items, int n);
@@ -578,6 +579,27 @@ void Run(const Item** items, const int n) {
   lcd.setFastBacklight(255, 0, 0);
 }
 
+bool CheckPasswordChar(char c) {
+  // The password should not have any repeated digits, otherwise we might need
+  // a Knuth-Morris-Pratt matcher to check it, which would complicate this code
+  // significantly.
+  static const char kPassword[5] PROGMEM = "13#*";
+  static int state = 0;
+  const char nextChar = pgm_read_byte(kPassword + state);
+  if (nextChar == c) {
+    state++;
+    if (state == 4) {
+      state = 0;
+      return true;
+    }
+    return false;
+  } else {
+    state = 0;
+    return false;
+  }
+}
+
+
 } // namespace menu
 
 namespace statemachine {
@@ -842,7 +864,8 @@ void setup() {
 
 void loop() {
   keypad.updateFIFO();
-  if (keypad.getButton() != 0 && state != SOUNDING_SHABBAT) {
+  char button = keypad.getButton();
+  if (button != 0 && menu::CheckPasswordChar(button) && state != SOUNDING_SHABBAT) {
     menu::Run(menu::main, menu::kMainLength);
     EEPROM.put(0, persistent_settings);
   }
