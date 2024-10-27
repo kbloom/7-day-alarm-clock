@@ -293,7 +293,7 @@ namespace menu {
 constexpr unsigned long kMenuTimeoutMillis = 1 * 60 * 1000UL;
 unsigned long lastInputTime = 0;
 
-bool IsCancelChar(char c) {
+bool IsExitChar(char c) {
   return c == '*' || c == '#';
 }
 
@@ -343,14 +343,14 @@ bool InputTime(Time& result) {
   c[2] = 0;
 
   c[0] = ReadChar();
-  if (IsCancelChar(c[0])) {
+  if (IsExitChar(c[0])) {
     lcd.noBlink();
     return false;
   }
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (IsCancelChar(c[1])) {
+  if (IsExitChar(c[1])) {
     lcd.noBlink();
     return false;
   }
@@ -360,14 +360,14 @@ bool InputTime(Time& result) {
   uint8_t hours24 = atoi(c);
 
   c[0] = ReadChar();
-  if (IsCancelChar(c[0])) {
+  if (IsExitChar(c[0])) {
     lcd.noBlink();
     return false;
   }
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (IsCancelChar(c[1])) {
+  if (IsExitChar(c[1])) {
     lcd.noBlink();
     return false;
   }
@@ -560,7 +560,7 @@ void Run(const Item** items, const int n) {
     lcd.clear();
     items[cur]->Display();
     const char c = ReadChar();
-    if (IsCancelChar(c)) {
+    if (IsExitChar(c)) {
       items[cur]->Leave();
       break;
     }
