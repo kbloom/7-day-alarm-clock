@@ -289,6 +289,13 @@ const char* Time::amPMString() const {
 
 namespace menu {
 
+constexpr unsigned long kMenuTimeoutMillis = 1 * 60 * 1000UL;
+unsigned long lastInputTime = 0;
+
+bool IsCancelChar(char c) {
+  return c == '*' || c == '#';
+}
+
 // Waits for a keypress on the keypad, and returns the
 // keypress. While it waits, it handles statemachine events.
 char ReadChar() {
@@ -296,11 +303,19 @@ char ReadChar() {
     delay(50);
     keypad.updateFIFO();
     if (keypad.getButton() != 0) {
+      lastInputTime=millis();
       return keypad.getButton();
+    }
+    if (millis() - lastInputTime > kMenuTimeoutMillis) {
+      // if you're in a text entry field, it may take multiple cancels to get back
+      // to the clock screen. So we'll set up for another timeout to cancel the next screen.
+      lastInputTime=millis();
+      return '*';
     }
     statemachine::Handle();
   }
 }
+
 
 int InputWeekday() {
   lcd.clear();
@@ -327,14 +342,14 @@ bool InputTime(Time& result) {
   c[2] = 0;
 
   c[0] = ReadChar();
-  if (c[0] == '#' || c[0] == '*') {
+  if (IsCancelChar(c[0])) {
     lcd.noBlink();
     return false;
   }
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (c[1] == '#' || c[1] == '*') {
+  if (IsCancelChar(c[1])) {
     lcd.noBlink();
     return false;
   }
@@ -344,14 +359,14 @@ bool InputTime(Time& result) {
   uint8_t hours24 = atoi(c);
 
   c[0] = ReadChar();
-  if (c[0] == '#' || c[0] == '*') {
+  if (IsCancelChar(c[0])) {
     lcd.noBlink();
     return false;
   }
   lcd.print(c[0]);
 
   c[1] = ReadChar();
-  if (c[1] == '#' || c[1] == '*') {
+  if (IsCancelChar(c[1])) {
     lcd.noBlink();
     return false;
   }
@@ -537,13 +552,14 @@ void SoundTest::Leave() const {
 
 
 void Run(const Item** items, const int n) {
+  lastInputTime = millis();
   lcd.setFastBacklight(0, 255, 127);
   int cur = 0;
   while (true) {
     lcd.clear();
     items[cur]->Display();
     const char c = ReadChar();
-    if (c == '#' || c == '*') {
+    if (IsCancelChar(c)) {
       items[cur]->Leave();
       break;
     }
