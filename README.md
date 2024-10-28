@@ -143,7 +143,7 @@ The alarm has 4 states:
 
 The menu navigtaion is as follows:
 
- * Press any key on the keypad to activate the alarm.
+ * Type `13#*` to active the menu.
  * Press '2' to move up the menu, and '8' or '0' to move down the menu.
  * Press '5' to select a menu item whose action is to select (primarily setting times.)
  * Press '4' or '6' to cycle through options
