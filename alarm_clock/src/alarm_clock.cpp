@@ -583,19 +583,28 @@ void Run(const Item** items, const int n) {
   lcd.setFastBacklight(255, 0, 0);
 }
 
+// Accepts password input one key at a time, and returns true when the password
+// has been entered correctly. If the last len(password) keypresses are the
+// correct password, then the password is accepted. If you started to enter the
+// wrong password, or hit random keys before entering the correct password,
+// there's no need to clear the input before hitting the correct password.
 bool CheckPasswordChar(char c) {
   // The password should not have any repeated digits, otherwise we might need
   // a Knuth-Morris-Pratt matcher to check it, which would complicate this code
   // significantly.
   static const char kPassword[5] PROGMEM = "13#*";
-  static int state = 0;
+  static unsigned state = 0;
+  const char firstChar = pgm_read_byte(kPassword);
   const char nextChar = pgm_read_byte(kPassword + state);
   if (nextChar == c) {
     state++;
-    if (state == 4) {
+    if (state == strlen_P(kPassword)) {
       state = 0;
       return true;
     }
+    return false;
+  } else if (firstChar == c) {
+    state = 1;
     return false;
   } else {
     state = 0;
