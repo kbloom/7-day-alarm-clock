@@ -536,8 +536,8 @@ void SoundSettings::Leave() const {
 }
 
 void SoundTest::Display() const {
-  lcd.println(F("Test Sound File"));
-  fprintf_P(lcd_file, PSTR("F%03d.mp3"), num_);
+  fprintf_P(lcd_file, PSTR("Test F%03d.mp3\r\n"), num_);
+  lcd.println(F("4=Stop 6=Play"));
 }
 
 void SoundTest::Handle(const char c) const {
