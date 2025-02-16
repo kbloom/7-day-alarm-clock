@@ -73,6 +73,7 @@ struct Time {
 struct PersistentSettings {
   Time alarms[7];
   bool alarms_off;
+  int snooze_length;
 };
 
 // Things are organized into namespaces to allow irrelevant sections
@@ -136,6 +137,11 @@ struct SoundTest : public Item {
     int num_;
 };
 
+struct SnoozeLength : public Item {
+  void Display() const override;
+  void Handle(char c) const override;
+};
+
 bool CheckPasswordChar(char c);
 
 
@@ -151,6 +157,7 @@ const Item* main[] = {
   new SetAlarm(4),
   new SetAlarm(5),
   new SetAlarm(6),
+  new SnoozeLength,
   new SoundSettings,
   new SoundTest(1),
   new SoundTest(2),
@@ -161,8 +168,6 @@ constexpr int kMainLength = sizeof(main) / sizeof(Item*);
 } // namespace menu
 
 namespace statemachine {
-
-constexpr int kSnoozeLength = 8;
 
 void TransitionStateTo(GlobalState new_state);
 void ExtendSnooze();
@@ -555,6 +560,25 @@ void SoundTest::Leave() const {
   }
 }
 
+void SnoozeLength::Display() const {
+  fprintf_P(lcd_file, PSTR("Snooze: %d min"), persistent_settings.snooze_length);
+}
+
+void SnoozeLength::Handle(char c) const {
+  if (c == '4') {
+    persistent_settings.snooze_length--;
+    if (persistent_settings.snooze_length < 1) {
+      persistent_settings.snooze_length=1;
+    }
+  }
+  if (c == '6') {
+    persistent_settings.snooze_length++;
+    if (persistent_settings.snooze_length > 20) {
+      persistent_settings.snooze_length=20;
+    }
+  }
+}
+
 
 void Run(const Item** items, const int n) {
   lastInputTime = millis();
@@ -622,7 +646,7 @@ void ExtendSnooze() {
     snooze = Time::FromClock();
   }
   snooze.state = ACTIVE;
-  snooze += kSnoozeLength;
+  snooze += persistent_settings.snooze_length;
 
 }
 
