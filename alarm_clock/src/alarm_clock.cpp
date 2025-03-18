@@ -546,6 +546,7 @@ void SoundTest::Handle(const char c) const {
   if (c == '6') {
     mp3.playFile(num_);
     Serial.println(mp3.getStatus());
+    // Status codes: 0 = OK, 1 = Fail, 2 = No such file, 5 = SD Error.
     Serial.println(mp3.hasCard());
     Serial.println(mp3.getSongCount());
     Serial.println(mp3.getSongName());
