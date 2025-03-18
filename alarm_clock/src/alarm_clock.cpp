@@ -507,6 +507,7 @@ void SoundSettings::Handle(const char c) const {
   if (state != SOUNDING && state != SOUNDING_SHABBAT && !mp3.isPlaying()) {
     mp3.playFile(1);
     Serial.println(mp3.getStatus());
+    // Status codes: 0 = OK, 1 = Fail, 2 = No such file, 5 = SD Error.
     Serial.println(mp3.hasCard());
     Serial.println(mp3.getSongCount());
     Serial.println(mp3.getSongName());
