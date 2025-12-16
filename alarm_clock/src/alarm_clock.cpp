@@ -797,7 +797,7 @@ void PrintTimeTall() {
   // which is slow. It's not a super big problem, but we do want to call
   // statemachine::Handle at least once a second, and the slow updates were making
   // me nervous.
-  char buf[6];
+  char buf[10];
   sprintf_P(buf, PSTR("%2d:%02d "), t.hours12(), t.minutes);
   double_high_digits::Writer<SerLCD> font(lcd);
   font.setCursor(0, 0);
