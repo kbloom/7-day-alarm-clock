@@ -798,14 +798,14 @@ void PrintTimeTall() {
   // statemachine::Handle at least once a second, and the slow updates were making
   // me nervous.
   char buf[6];
-  sprintf_P(buf, PSTR("%2d:%02d"), t.hours12(), t.minutes);
+  sprintf_P(buf, PSTR("%2d:%02d "), t.hours12(), t.minutes);
   double_high_digits::Writer<SerLCD> font(lcd);
   font.setCursor(0, 0);
   font.print(buf);
   lcd.setCursor(6, 0);
-  lcd.print(kDayNames[rtc.getWeekday()]);
+  fprintf_P(lcd_file, PSTR("%-7s"), kDayNames[rtc.getWeekday()]);
   lcd.setCursor(6, 1);
-  lcd.print(t.amPMString());
+  fprintf_P(lcd_file, PSTR("%-6s"), t.amPMString());
 }
 
 void PrintNextAlarm() {
