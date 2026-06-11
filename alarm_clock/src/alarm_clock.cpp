@@ -15,7 +15,6 @@
   limitations under the License.
 */
 #include <EEPROM.h>
-#include <SparkFun_Qwiic_Button.h>
 #include <SparkFun_RV1805.h>
 #include <SparkFun_Qwiic_MP3_Trigger_Arduino_Library.h>
 #include <SparkFun_Qwiic_Keypad_Arduino_Library.h>
@@ -185,14 +184,52 @@ void PrintShabbatStatus();
 void ClearStatusArea();
 } // namespace display
 
+using ISR = void (*)();
+
+class Button {
+  uint8_t pin;
+  volatile unsigned long lastInterruptTime = 0;
+  volatile bool pressed = false;
+
+  static constexpr unsigned long kDebounceTimeMillis = 100;
+
+  public:
+
+  explicit Button(uint8_t pin):pin(pin){}
+
+  void begin(ISR isr) {
+    pinMode(pin, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(pin), isr, FALLING);
+  }
+
+  bool isPressed() {
+    return !digitalRead(pin);
+  }
+
+  bool checkAndClear() {
+    bool p = pressed;
+    pressed = false;
+    return p;
+  }
+
+  void handleInterrupt() {
+    unsigned long now = millis();
+    if (now - lastInterruptTime > kDebounceTimeMillis) {
+      pressed = true;
+    }
+    lastInterruptTime = now;
+  }
+};
+
+
 int operator-(const Time& t, const Time& u);
 int WriteToPrint(char c, FILE* f);
 FILE* OpenAsFile(Print& p);
 Time& TodaysAlarm();
 int NextAlarmDay();
 
-QwiicButton stop_button;
-QwiicButton snooze_button;
+Button stop_button(2);
+Button snooze_button(3);
 KEYPAD keypad;
 MP3TRIGGER mp3;
 RV1805 rtc;
@@ -216,6 +253,16 @@ GlobalState state;
 Time snooze;
 Time alarm_stop;
 PersistentSettings persistent_settings;
+
+void snoozeButtonISR() {
+  snooze_button.handleInterrupt();
+}
+
+void stopButtonISR() {
+  stop_button.handleInterrupt();
+}
+
+
 
 int WriteToPrint(char c, FILE* f) {
   Print* p = static_cast<Print*>(fdev_get_udata(f));
@@ -658,8 +705,8 @@ void TransitionStateTo(GlobalState new_state) {
   }
   if (state == SOUNDING_SHABBAT) {
     Serial.println(F("Transitioning from SOUNDING_SHABBAT"));
-    snooze_button.clearEventBits();
-    stop_button.clearEventBits();
+    snooze_button.checkAndClear();
+    stop_button.checkAndClear();
   }
   if (state == SOUNDING || state == SOUNDING_SHABBAT) {
     Serial.println(F("Transitioning from SOUNDING"));
@@ -737,32 +784,26 @@ void Handle() {
       TransitionStateTo(SOUNDING);
     } else if (alarm_now && TodaysAlarm().state == SHABBAT) {
       TransitionStateTo(SOUNDING_SHABBAT);
-    }  else if (stop_button.hasBeenClicked()) {
-      stop_button.clearEventBits();
+    }  else if (stop_button.checkAndClear()) {
       ToggleSkipped();
-    } else if (snooze_button.hasBeenClicked()) {
-      snooze_button.clearEventBits();
+    } else if (snooze_button.checkAndClear()) {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SNOOZING) {
     if (snooze == now) {
       TransitionStateTo(SOUNDING);
-    } else if (stop_button.hasBeenClicked()) {
-      stop_button.clearEventBits();
+    } else if (stop_button.checkAndClear()) {
       TransitionStateTo(WAITING);
-    } else if (snooze_button.hasBeenClicked()) {
-      snooze_button.clearEventBits();
+    } else if (snooze_button.checkAndClear()) {
       ExtendSnooze();
     }
   } else if (state == SOUNDING) {
     if (!mp3.isPlaying()) {
       TransitionStateTo(WAITING);
-    } else if (stop_button.hasBeenClicked()) {
-      stop_button.clearEventBits();
+    } else if (stop_button.checkAndClear()) {
       mp3.stop();
       TransitionStateTo(WAITING);
-    } else if (snooze_button.hasBeenClicked()) {
-      snooze_button.clearEventBits();
+    } else if (snooze_button.checkAndClear()) {
       TransitionStateTo(SNOOZING);
     }
   } else if (state == SOUNDING_SHABBAT) {
@@ -883,8 +924,8 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
   lcd.begin(Wire);
-  stop_button.begin();
-  snooze_button.begin(0x6E);
+  stop_button.begin(stopButtonISR);
+  snooze_button.begin(snoozeButtonISR);
   keypad.begin();
   mp3.begin();
   rtc.begin();
@@ -892,10 +933,6 @@ void setup() {
   double_high_digits::Install(lcd);
   lcd_file = OpenAsFile(lcd);
 
-  // I've found these buttons to be very finicky in dry weather, so I'm trying
-  // to give them long debounce times.
-  stop_button.setDebounceTime(1000);
-  snooze_button.setDebounceTime(1000);
   rtc.set24Hour();
   lcd.setFastBacklight(255, 0, 0);
   state = WAITING;
