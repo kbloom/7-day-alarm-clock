@@ -21,28 +21,23 @@ details below in the assembly instructions.
  * [SparkFun Qwiic MP3 Trigger DEV-15165](https://www.sparkfun.com/products/15165)
  * [SparkFun 16x2 SerLCD - RGB Text (Qwiic) LCD-16397](https://www.sparkfun.com/products/16397)
  * [SparkFun Qwiic Keypad - 12 Button COM-15290](https://www.sparkfun.com/products/15290)
- * 2x SparkFun Qwiic Arcade buttons. I used the following, but you can choose
-   other colors. You'll need to change the I2C address of the snooze button to
-   110 (0x6E) using
-   [Example5_ChangeI2CAddress](https://github.com/sparkfun/SparkFun_Qwiic_Button_Arduino_Library/tree/master/examples/Example5_ChangeI2CAddress).
-   * [Red SPX-15591](https://www.sparkfun.com/products/15591) for the stop button.
-   * [Blue SPX-15592](https://www.sparkfun.com/products/15592) for the snooze button.
+ * 2x Arcade buttons. [SparkFun](https://www.sparkfun.com/components/buttons-and-switches.html) has several choices.
  * A speaker. I used [this one](https://www.amazon.com/gp/product/B0738NLFTG).
- * 6 Qwiic cables.  The [SparkFun Qwiic Cable kit KIT-15081](https://www.sparkfun.com/products/15081) will do nicely.
+ * 4 Qwiic cables.  The [SparkFun Qwiic Cable kit KIT-15081](https://www.sparkfun.com/products/15081) will do nicely.
  * a [power adapter TOL-15314](https://www.sparkfun.com/products/15314)
  * a micro-SD card
  * some sort of enclosure for the final product. I used [this box](https://www.amazon.com/gp/product/B018QLQFR6).
 
 Additionally, you'll need a micro-USB cable to program the RedBoard, and you'll
 either need a USB-C cable or a Micro SD card reader to put an MP3 on the Micro
-SD card for when your alarm goes off.
+SD card for when your alarm goes off. You will also need some hookup wire or
+jumper wires to connect the arcade buttons to the RedBoard.
 
 # Assembling the electronics
 
 1. Download and install the Arduino IDE from https://www.arduino.cc/en/software
 2. Use the library manager within the Arduino IDE to install the following libraries:
 
-   * SparkFun Qwiic Button
    * SparkFun RV1805
    * SparkFun Qwiic MP3 Trigger Arduino Library
    * SparkFun Qwiic Keypad Arduino Library
@@ -63,10 +58,9 @@ SD card for when your alarm goes off.
 4. Connect components individually to the RedBoard and run some examples to
    verify that your components work individually.
 
-5. Connect your snooze button to the RedBoard. Open
-   `SparkFun_Qwiic_Button_Arduino_Library`'s example
-   `Example5_ChangeI2CAddress`. Open the serial monitor in the Arduino IDE. Upload
-   the example to your RedBoard. Change the address of this button to `6E`.
+5. Connect the arcade buttons to the RedBoard. The stop button should be
+   connected to digital pin 2 and GND. The snooze button should be connected to
+   digital pin 3 and GND.
 
 6. Upload the `eeprom_clear` example from the `EEPROM` library, and let it run
    until the LED labeled `13` on the RedBoard turns on. This will let your
@@ -80,12 +74,12 @@ SD card for when your alarm goes off.
    off the end of the wire. Insert the stripped wires into the two holes of the
    connecter labeled "Speaker" on the MP3 trigger board.
 
-7. Optionally, upload the `Example1_SetTime` example from the `SparkFun RV1085`
+9. Optionally, upload the `Example1_SetTime` example from the `SparkFun RV1085`
    library to set the clock time for the first time. You'll want to keep the
    alarm clock connected to your computer for about the next 10 minutes or so in
    order to charge the supercapacitor that provides backup power to the RTC.
 
-8. Now you're ready to install the Alarm Clock firmware on your RedBoard. Open
+10. Now you're ready to install the Alarm Clock firmware on your RedBoard. Open
    `alarm_clock.ino` in the Arduino IDE, and upload it. Your alarm clock is now
    operational. You'll probably want to build an enclosure for it.
 
