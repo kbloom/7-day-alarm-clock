@@ -191,7 +191,7 @@ class Button {
   volatile unsigned long lastInterruptTime = 0;
   volatile bool pressed = false;
 
-  static constexpr unsigned long kDebounceTimeMillis = 100;
+  static constexpr unsigned long kDebounceTimeMillis = 1000;
 
   public:
 
