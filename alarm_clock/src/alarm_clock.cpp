@@ -208,12 +208,13 @@ class Button {
   }
 
   bool checkAndClear() {
-    int p;
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-      p = presses;
-      if (p > 0) {
-        presses--;
-      }
+    // Theoretcally, this needs to be atomic, and run with interrupts disabled.
+    // However, I was very likely to have 3 presses of the snooze button be read
+    // as 4 presses when wrapping this in an ATOMIC_BLOCK, and unlikely to have
+    // this happen when this is not wrapped in an ATOMIC_BLOCK.
+    int p = presses;
+    if (p > 0) {
+      presses--;
     }
     return p > 0;
   }
