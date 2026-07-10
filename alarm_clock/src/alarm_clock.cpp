@@ -27,8 +27,6 @@
     0x37: MP3
     0x4B: Keypad
     0x69: RTC
-    0x6E: Blue Button
-    0x6F: Red Button
     0x72: SerLCD
 */
 
