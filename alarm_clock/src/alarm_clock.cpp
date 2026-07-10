@@ -20,6 +20,7 @@
 #include <SparkFun_Qwiic_Keypad_Arduino_Library.h>
 #include <SerLCD.h>
 #include <stdio.h>
+#include <util/atomic.h>
 #include "double_high_digits.h"
 
 /* I2C addresses:
@@ -189,9 +190,9 @@ using ISR = void (*)();
 class Button {
   uint8_t pin;
   volatile unsigned long lastInterruptTime = 0;
-  volatile bool pressed = false;
+  volatile int presses = 0;
 
-  static constexpr unsigned long kDebounceTimeMillis = 1000;
+  static constexpr unsigned long kDebounceTimeMillis = 10;
 
   public:
 
@@ -199,7 +200,7 @@ class Button {
 
   void begin(ISR isr) {
     pinMode(pin, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(pin), isr, FALLING);
+    attachInterrupt(digitalPinToInterrupt(pin), isr, CHANGE);
   }
 
   bool isPressed() {
@@ -207,15 +208,21 @@ class Button {
   }
 
   bool checkAndClear() {
-    bool p = pressed;
-    pressed = false;
-    return p;
+    int p;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+      p = presses;
+      if (p > 0) {
+        presses--;
+      }
+    }
+    return p > 0;
   }
 
   void handleInterrupt() {
+    bool down = isPressed();
     unsigned long now = millis();
-    if (now - lastInterruptTime > kDebounceTimeMillis) {
-      pressed = true;
+    if (down && now - lastInterruptTime > kDebounceTimeMillis) {
+      presses++;
     }
     lastInterruptTime = now;
   }
