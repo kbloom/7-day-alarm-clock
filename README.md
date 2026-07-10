@@ -22,6 +22,11 @@ details below in the assembly instructions.
  * [SparkFun 16x2 SerLCD - RGB Text (Qwiic) LCD-16397](https://www.sparkfun.com/products/16397)
  * [SparkFun Qwiic Keypad - 12 Button COM-15290](https://www.sparkfun.com/products/15290)
  * 2x Arcade buttons. [SparkFun](https://www.sparkfun.com/components/buttons-and-switches.html) has several choices.
+   Originally,  I used Qwiic arcade buttons, so that I wouldn't have to learn
+   to solder. However, these are discontinued, and I having this many Qwiic
+   devices drew too much power, causing power sags when the alarm went off.
+   If you don't want to solder, look for direct-wire buttons that come with
+   wires preattached.
  * A speaker. I used [this one](https://www.amazon.com/gp/product/B0738NLFTG).
  * 4 Qwiic cables.  The [SparkFun Qwiic Cable kit KIT-15081](https://www.sparkfun.com/products/15081) will do nicely.
  * a [power adapter TOL-15314](https://www.sparkfun.com/products/15314)
